@@ -11,6 +11,7 @@ import (
 	"fyne.io/fyne/v2/cmd/fyne_demo/tutorials"
 	"fyne.io/fyne/v2/cmd/fyne_settings/settings"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/driver/desktop"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
@@ -18,15 +19,19 @@ import (
 	"log"
 	"math/rand"
 	"net/url"
+	"strconv"
+	"strings"
 	"time"
 )
 
 const preferenceCurrentTutorial = "currentTutorial"
+const PDefaultLiveHostNo = "DefaultLiveHostNo"
+const PLiveHosts = "LiveHosts"
 
 var topWindow fyne.Window
-var dev = true
 
 func main() {
+	appSize := fyne.NewSize(470, 460)
 	application := app.NewWithID("pro.lowking.fallguys66")
 	application.Settings().SetTheme(&data.MyTheme{
 		Regular:    data.FontSmileySansOblique,
@@ -73,12 +78,13 @@ func main() {
 	elements = append(elements, cLogoBlack)
 
 	// 直播间label
-	lLiveHostLabel := canvas.NewText("直播间：", color.RGBA{
-		R: 100,
-		G: 100,
-		B: 100,
+	accentColor := color.RGBA{
+		R: 46,
+		G: 108,
+		B: 246,
 		A: 255,
-	})
+	}
+	lLiveHostLabel := canvas.NewText("直播间：", accentColor)
 	lLiveHostLabel.TextSize = 35
 	toolbarPaddingTop := padding + 10
 	toolbarPaddingLeft := 120
@@ -87,17 +93,22 @@ func main() {
 
 	optionSize := fyne.NewSize(140, 37)
 	// 直播间输入框
-	liveHostNo := canvas.NewText("156277", color.RGBA{
+	defaultLiveHostNo := application.Preferences().StringWithFallback(PDefaultLiveHostNo, "")
+	tLiveHostNo := canvas.NewText(defaultLiveHostNo, color.RGBA{
 		R: 106,
 		G: 135,
 		B: 89,
 		A: 255,
 	})
-	liveHostNo.TextSize = 35
-	liveHostNo.Move(fyne.NewPos(cLogo.Size().Width+40+optionSize.Width+float32(padding*2), float32(toolbarPaddingTop)))
-	elements = append(elements, liveHostNo)
+	tLiveHostNo.TextSize = 35
+	tLiveHostNo.Move(fyne.NewPos(cLogo.Size().Width+40+optionSize.Width+float32(padding*2), float32(toolbarPaddingTop)))
+	elements = append(elements, tLiveHostNo)
 	liveHosts := []string{
 		"156277",
+	}
+	pLiveHosts := application.Preferences().StringWithFallback(PLiveHosts, "")
+	if pLiveHosts != "" {
+		liveHosts = strings.Split(pLiveHosts, "|")
 	}
 	// bindLiveHosts := binding.BindStringList(&liveHosts)
 	liveHostOption := widget.NewSelectEntry(liveHosts)
@@ -109,14 +120,59 @@ func main() {
 	liveHostOption.OnChanged = func(s string) {
 		liveHost = s
 	}
+	liveHostOption.SetText(defaultLiveHostNo)
 	cLiveHostOption := container.NewMax(liveHostOption)
 	cLiveHostOption.Resize(optionSize)
 	cLiveHostOption.Move(fyne.NewPos(cLogo.Size().Width+40+optionSize.Width+float32(padding*2), float32(toolbarPaddingTop)))
 	elements = append(elements, cLiveHostOption)
 
+	// 初始化copyright
+	lCopyrightL := canvas.NewText("斗鱼ID：石疯悦耳", color.RGBA{
+		R: 32,
+		G: 32,
+		B: 32,
+		A: 100,
+	})
+	lCopyrightL.TextSize = 14
+	lCopyrightL.Move(fyne.NewPos(0, appSize.Height-25))
+	lCopyrightR := canvas.NewText("© lowking 2023. All Rights Reserved.", color.RGBA{
+		R: 32,
+		G: 32,
+		B: 32,
+		A: 100,
+	})
+	lCopyrightR.TextSize = 14
+	lCopyrightR.Alignment = fyne.TextAlignTrailing
+	lCopyrightR.Move(fyne.NewPos(appSize.Width-10, appSize.Height-25))
+	elements = append(elements, lCopyrightL)
+	elements = append(elements, lCopyrightR)
+
+	// 初始化tab列表
+	tabs := container.NewAppTabs(
+		container.NewTabItem("游玩列表", makeEmptyList(accentColor)),
+		container.NewTabItem("收藏列表", makeEmptyList(accentColor)),
+		container.NewTabItem("查询结果", makeEmptyList(accentColor)),
+	)
+	cTabList := container.NewBorder(nil, nil, nil, nil, tabs)
+	cTabList.Move(fyne.NewPos(0, cLogo.Size().Height+float32(padding*3)))
+	cTabList.Resize(fyne.NewSize(appSize.Width, appSize.Height-cLogo.Size().Height))
+
+	elements = append(elements, cTabList)
+
 	// 连接直播间按钮
 	var btnCon *widget.Button
 	btnCon = widget.NewButtonWithIcon("连接", theme.NavigateNextIcon(), func() {
+		if liveHost == "" {
+			btnConSetDefault(btnCon, liveHostOption)
+			dialog.ShowInformation("提示", "请填写斗鱼直播间号", window)
+			return
+		} else if _, err := strconv.Atoi(liveHost); err != nil && liveHost != "dev" {
+			btnConSetDefault(btnCon, liveHostOption)
+			dialog.ShowInformation("提示", "请输入纯数字直播间号", window)
+			liveHostOption.SetText("")
+			window.Canvas().Focus(liveHostOption)
+			return
+		}
 		// 根据当前状态执行对应操作
 		switch btnCon.Importance {
 		case widget.MediumImportance, widget.DangerImportance:
@@ -125,31 +181,69 @@ func main() {
 			btnCon.Icon = theme.ViewRefreshIcon()
 			btnCon.Text = "..."
 			btnCon.Refresh()
-			// todo 连接弹幕
+			connectSuc := false
 			time.Sleep(1 * time.Second)
-			if rand.Intn(10)%2 == 1 {
+			if liveHost != "dev" {
+				// todo 连接弹幕
+				log.Printf("connecting douyu")
+			} else {
+				// 开发模式模拟获取id
+				connectSuc = rand.Intn(10)%2 == 1
+				// 模拟数据，写入数据库
+				go func() {
+					for {
+						time.Sleep(1 * time.Second)
+						if btnCon.Importance != widget.HighImportance {
+							log.Printf("exit filter loop")
+							return
+						}
+						// mock map id
+						mapId := fmt.Sprintf("%d-%d-%d ceshi sdfkjij", rand.Intn(9000)+1000, rand.Intn(9000)+1000, rand.Intn(9000)+1000)
+						log.Printf("loop %s", mapId)
+					}
+				}()
+			}
+			if connectSuc {
 				// 连接成功
 				btnCon.Importance = widget.HighImportance
 				btnCon.Text = "成功"
 				btnCon.Icon = theme.ConfirmIcon()
 				liveHostOption.Hide()
+				tLiveHostNo.Text = liveHost
+				tLiveHostNo.Refresh()
+				// 更新下拉框
+				if liveHost != "dev" && !utils.In(liveHosts, liveHost) {
+					liveHosts = append(liveHosts, liveHost)
+					liveHostOption.SetOptions(liveHosts)
+					liveHostOption.Refresh()
+					application.Preferences().SetString(PLiveHosts, strings.Join(liveHosts, "|"))
+				}
+				// application.Preferences().SetString(PLiveHosts, "")
+				// 保存默认值
+				application.Preferences().SetString(PDefaultLiveHostNo, liveHost)
+
+				// 定时查询获取最新地图
+				go func() {
+					// playedMapList := tabs.Items[1]
+					// starMapList := tabs.Items[2]
+					for {
+						time.Sleep(1 * time.Second)
+						if btnCon.Importance != widget.HighImportance {
+							log.Printf("exit query loop")
+							return
+						}
+						log.Printf("loop")
+					}
+				}()
 			} else {
 				// 连接失败
 				btnCon.Importance = widget.DangerImportance
 				btnCon.Text = "错误"
 				btnCon.Icon = theme.CancelIcon()
 			}
-		case widget.HighImportance, widget.WarningImportance:
+		case widget.HighImportance:
 			// 连接中 已连接，再次点击断开连接，状态设置成未连接
-			btnCon.Importance = widget.MediumImportance
-			btnCon.Text = "连接"
-			btnCon.Icon = theme.NavigateNextIcon()
-			liveHostOption.Show()
-		}
-		if liveHost != "" && !utils.In(liveHosts, liveHost) {
-			liveHosts = append(liveHosts, liveHost)
-			liveHostOption.SetOptions(liveHosts)
-			liveHostOption.Refresh()
+			btnConSetDefault(btnCon, liveHostOption)
 		}
 		btnCon.Refresh()
 	})
@@ -162,10 +256,24 @@ func main() {
 	gridLayout := container.NewWithoutLayout(elements...)
 
 	window.SetContent(gridLayout)
-	window.Resize(fyne.NewSize(640, 460))
+	window.Resize(appSize)
 	window.CenterOnScreen()
 	window.SetFixedSize(true)
 	window.ShowAndRun()
+}
+
+func btnConSetDefault(btnCon *widget.Button, liveHostOption *widget.SelectEntry) {
+	btnCon.Importance = widget.MediumImportance
+	btnCon.Text = "连接"
+	btnCon.Icon = theme.NavigateNextIcon()
+	liveHostOption.Show()
+}
+
+func makeEmptyList(accentColor color.RGBA) *fyne.Container {
+	text := canvas.NewText("无数据 ...", accentColor)
+	text.TextSize = 20
+	cEmpty := container.NewCenter(text)
+	return cEmpty
 }
 
 func flashEle(times int, elements ...*fyne.Container) {
