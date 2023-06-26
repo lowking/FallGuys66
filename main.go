@@ -38,7 +38,7 @@ var topWindow fyne.Window
 var tabs *container.AppTabs
 
 func main() {
-	appSize := fyne.NewSize(995, 860)
+	appSize := fyne.NewSize(995, 850)
 	application := app.NewWithID("pro.lowking.fallguys66")
 	application.Settings().SetTheme(&data.MyTheme{
 		Regular:    data.FontSmileySansOblique,
@@ -141,7 +141,9 @@ func main() {
 		A: 100,
 	})
 	lCopyrightL.TextSize = 14
-	lCopyrightL.Move(fyne.NewPos(0, appSize.Height-25))
+	// lCopyrightL.Move(fyne.NewPos(0, appSize.Height-25))
+	lCopyrightL.Alignment = fyne.TextAlignTrailing
+	lCopyrightL.Move(fyne.NewPos(appSize.Width-10, 140))
 	lCopyrightR := canvas.NewText("© lowking 2023. All Rights Reserved.", color.RGBA{
 		R: 32,
 		G: 32,
@@ -150,7 +152,8 @@ func main() {
 	})
 	lCopyrightR.TextSize = 14
 	lCopyrightR.Alignment = fyne.TextAlignTrailing
-	lCopyrightR.Move(fyne.NewPos(appSize.Width-10, appSize.Height-25))
+	// lCopyrightR.Move(fyne.NewPos(appSize.Width-10, appSize.Height-25))
+	lCopyrightR.Move(fyne.NewPos(appSize.Width-110, 140))
 	elements = append(elements, lCopyrightL)
 	elements = append(elements, lCopyrightR)
 
