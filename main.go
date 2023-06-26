@@ -3,6 +3,12 @@ package main
 
 import (
 	"FallGuys66/data"
+	_ "FallGuys66/db"
+	"FallGuys66/handler"
+	"FallGuys66/live/douyu/DMconfig/config"
+	"FallGuys66/live/douyu/DYtype"
+	"FallGuys66/live/douyu/client"
+	"FallGuys66/live/douyu/lib/logger"
 	"FallGuys66/utils"
 	"fmt"
 	"fyne.io/fyne/v2"
@@ -160,6 +166,7 @@ func main() {
 	elements = append(elements, cTabList)
 
 	// 连接直播间按钮
+	var webSocketClient client.DyBarrageWebSocketClient
 	var btnCon *widget.Button
 	btnCon = widget.NewButtonWithIcon("连接", theme.NavigateNextIcon(), func() {
 		if liveHost == "" {
@@ -185,22 +192,66 @@ func main() {
 			time.Sleep(1 * time.Second)
 			if liveHost != "dev" {
 				// todo 连接弹幕
-				log.Printf("connecting douyu")
+				logger.Infof("connecting douyu: %s", liveHost)
+				spiderConfig := &config.DMconfig{
+					Rid:            liveHost,
+					LoginMsg:       "type@=loginreq/room_id@=%s/dfl@=sn@A=105@Sss@A=1/username@=%s/uid@=%s/ver@=20190610/aver@=218101901/ct@=0/",
+					LoginJoinGroup: "type@=joingroup/rid@=%s/gid@=-9999/",
+					Url:            "wss://danmuproxy.douyu.com:8506/",
+				}
+				out := make(chan client.Item)
+				webSocketClient = client.DyBarrageWebSocketClient{
+					ItemIn: out,
+					Config: spiderConfig,
+					MsgBreakers: DYtype.CodeBreakershandler{
+						IsLive: false,
+					},
+				}
+				go func() {
+					webSocketClient.Init()
+					webSocketClient.Start()
+					logger.Infof("disconnect %s", liveHost)
+				}()
+				go func() {
+					// 获取弹幕，处理消息
+					for {
+						msg := <-out
+						switch msg.Type {
+						case "chatmsg":
+							handler.FilterMap(msg)
+						default:
+							logger.ShowJson("[%s]not handle msg: %s", msg.Type, msg)
+						}
+					}
+				}()
+				connectSuc = true
 			} else {
 				// 开发模式模拟获取id
 				connectSuc = rand.Intn(10)%2 == 1
 				// 模拟数据，写入数据库
 				go func() {
+					count := 0
 					for {
-						time.Sleep(1 * time.Second)
 						if btnCon.Importance != widget.HighImportance {
 							log.Printf("exit filter loop")
-							return
+							break
 						}
 						// mock map id
 						mapId := fmt.Sprintf("%d-%d-%d ceshi sdfkjij", rand.Intn(9000)+1000, rand.Intn(9000)+1000, rand.Intn(9000)+1000)
 						log.Printf("loop %s", mapId)
+						count++
+						handler.FilterMap(client.Item{
+							Rid:     "",
+							Cid:     "",
+							Uid:     "",
+							Type:    "",
+							Txt:     mapId,
+							Nn:      "",
+							Level:   "",
+							Payload: nil,
+						})
 					}
+					logger.Infof("mock %d map", count)
 				}()
 			}
 			if connectSuc {
@@ -244,6 +295,9 @@ func main() {
 		case widget.HighImportance:
 			// 连接中 已连接，再次点击断开连接，状态设置成未连接
 			btnConSetDefault(btnCon, liveHostOption)
+			if liveHost != "dev" {
+				webSocketClient.Stop()
+			}
 		}
 		btnCon.Refresh()
 	})
@@ -351,15 +405,15 @@ func makeMenu(a fyne.App, w fyne.Window) *fyne.MainMenu {
 	disabledItem := fyne.NewMenuItem("Disabled", nil)
 	disabledItem.Disabled = true
 	otherItem := fyne.NewMenuItem("Other", nil)
-	mailItem := fyne.NewMenuItem("Mail", func() { fmt.Println("Menu New->Other->Mail") })
+	mailItem := fyne.NewMenuItem("Mail", func() { logger.Debug("Menu New->Other->Mail") })
 	mailItem.Icon = theme.MailComposeIcon()
 	otherItem.ChildMenu = fyne.NewMenu("",
-		fyne.NewMenuItem("Project", func() { fmt.Println("Menu New->Other->Project") }),
+		fyne.NewMenuItem("Project", func() { logger.Debug("Menu New->Other->Project") }),
 		mailItem,
 	)
-	fileItem := fyne.NewMenuItem("File", func() { fmt.Println("Menu New->File") })
+	fileItem := fyne.NewMenuItem("File", func() { logger.Debug("Menu New->File") })
 	fileItem.Icon = theme.FileIcon()
-	dirItem := fyne.NewMenuItem("Directory", func() { fmt.Println("Menu New->Directory") })
+	dirItem := fyne.NewMenuItem("Directory", func() { logger.Debug("Menu New->Directory") })
 	dirItem.Icon = theme.FolderIcon()
 	newItem.ChildMenu = fyne.NewMenu("",
 		fileItem,
@@ -395,7 +449,7 @@ func makeMenu(a fyne.App, w fyne.Window) *fyne.MainMenu {
 		shortcutFocused(pasteShortcut, w)
 	})
 	pasteItem.Shortcut = pasteShortcut
-	performFind := func() { fmt.Println("Menu Find") }
+	performFind := func() { logger.Debug("Menu Find") }
 	findItem := fyne.NewMenuItem("Find", performFind)
 	findItem.Shortcut = &desktop.CustomShortcut{KeyName: fyne.KeyF, Modifier: fyne.KeyModifierShortcutDefault | fyne.KeyModifierAlt | fyne.KeyModifierShift | fyne.KeyModifierControl | fyne.KeyModifierSuper}
 	w.Canvas().AddShortcut(findItem.Shortcut, func(shortcut fyne.Shortcut) {
