@@ -1,9 +1,11 @@
 package db
 
 import (
+	"FallGuys66/db/model"
 	"FallGuys66/live/douyu/client"
 	"FallGuys66/live/douyu/lib/logger"
 	"database/sql"
+	"fmt"
 	_ "github.com/mattn/go-sqlite3"
 	"runtime/debug"
 	"time"
@@ -27,6 +29,8 @@ func init() {
         uid VARCHAR(20) NULL,
         txt VARCHAR(1024) NULL,
         level VARCHAR(4) NULL,
+        state VARCHAR(1) NOT NULL DEFAULT 0,
+        star VARCHAR(1) NOT NULL DEFAULT 0,
         created DATE NULL
     );
     `
@@ -52,4 +56,32 @@ func InsertMap(mapId string, msg client.Item) {
 	//
 	// id, err := res.LastInsertId()
 	// checkErr(err)
+}
+
+func ListMap(pageNo int, pageSize int, where string, order string) []model.MapInfo {
+	start := (pageNo - 1) * pageSize
+	// end := pageNo * pageSize
+	rows, err := Db.Query(fmt.Sprintf("SELECT mapId, rid, nn, uid, txt, level, state, star, created FROM mapinfo where 1=1 %s %s limit %d, %d", where, order, start, pageSize))
+	checkErr(err)
+	var mapInfo model.MapInfo
+	var mapInfos []model.MapInfo
+
+	for rows.Next() {
+		mapInfo = model.MapInfo{}
+		_ = rows.Scan(
+			&mapInfo.MapId,
+			&mapInfo.Rid,
+			&mapInfo.Nn,
+			&mapInfo.Uid,
+			&mapInfo.Txt,
+			&mapInfo.Level,
+			&mapInfo.State,
+			&mapInfo.Star,
+			&mapInfo.Created,
+		)
+		mapInfos = append(mapInfos, mapInfo)
+	}
+	_ = rows.Close()
+
+	return mapInfos
 }

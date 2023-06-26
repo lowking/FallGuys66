@@ -35,9 +35,10 @@ const PDefaultLiveHostNo = "DefaultLiveHostNo"
 const PLiveHosts = "LiveHosts"
 
 var topWindow fyne.Window
+var tabs *container.AppTabs
 
 func main() {
-	appSize := fyne.NewSize(470, 460)
+	appSize := fyne.NewSize(995, 860)
 	application := app.NewWithID("pro.lowking.fallguys66")
 	application.Settings().SetTheme(&data.MyTheme{
 		Regular:    data.FontSmileySansOblique,
@@ -153,17 +154,41 @@ func main() {
 	elements = append(elements, lCopyrightL)
 	elements = append(elements, lCopyrightR)
 
+	// 给列表行添加背景
+	// rowHeight := 39
+	// for i := 0; i < int(appSize.Height/float32(rowHeight)); i+=2 {
+	// 	tableRowLine := canvas.NewRectangle(color.RGBA{
+	// 		R: 234,
+	// 		G: 234,
+	// 		B: 234,
+	// 		A: 255,
+	// 	})
+	// 	tableRowLine.Resize(fyne.NewSize(appSize.Width-10, float32(rowHeight)))
+	// 	tableRowLine.Move(fyne.NewPos(0, cLogo.Size().Height+float32(padding*3)+114+float32((rowHeight)*i)-float32(i)*1.4))
+	// 	elements = append(elements, tableRowLine)
+	// }
+
 	// 初始化tab列表
-	tabs := container.NewAppTabs(
-		container.NewTabItem("游玩列表", makeEmptyList(accentColor)),
+	tabs = container.NewAppTabs(
+		container.NewTabItem("未玩列表", makeEmptyList(accentColor)),
+		container.NewTabItem("已玩列表", makeEmptyList(accentColor)),
 		container.NewTabItem("收藏列表", makeEmptyList(accentColor)),
-		container.NewTabItem("查询结果", makeEmptyList(accentColor)),
 	)
 	cTabList := container.NewBorder(nil, nil, nil, nil, tabs)
 	cTabList.Move(fyne.NewPos(0, cLogo.Size().Height+float32(padding*3)))
 	cTabList.Resize(fyne.NewSize(appSize.Width, appSize.Height-cLogo.Size().Height))
-
 	elements = append(elements, cTabList)
+
+	// 直线分割表头
+	// tableHeaderLine := canvas.NewRectangle(color.RGBA{
+	// 	R: 204,
+	// 	G: 204,
+	// 	B: 204,
+	// 	A: 255,
+	// })
+	// tableHeaderLine.Resize(fyne.NewSize(appSize.Width, 5))
+	// tableHeaderLine.Move(fyne.NewPos(0, cLogo.Size().Height+float32(padding*3)+75))
+	// elements = append(elements, tableHeaderLine)
 
 	// 连接直播间按钮
 	var webSocketClient client.DyBarrageWebSocketClient
@@ -278,12 +303,14 @@ func main() {
 					// playedMapList := tabs.Items[1]
 					// starMapList := tabs.Items[2]
 					for {
-						time.Sleep(1 * time.Second)
+						time.Sleep(2 * time.Second)
 						if btnCon.Importance != widget.HighImportance {
 							log.Printf("exit query loop")
 							return
 						}
-						log.Printf("loop")
+						go handler.RefreshMapList(tabs, 0, `and state="0"`, `order by created asc, mapId`)
+						go handler.RefreshMapList(tabs, 1, `and state="1"`, `order by created desc, mapId`)
+						go handler.RefreshMapList(tabs, 2, `and star="1"`, `order by created desc, mapId`)
 					}
 				}()
 			} else {
@@ -386,6 +413,12 @@ func allWidgets(application fyne.App, window fyne.Window) {
 func logLifecycle(a fyne.App) {
 	a.Lifecycle().SetOnStarted(func() {
 		log.Println("Lifecycle: Started")
+		// 第一次加载列表
+		if a.Preferences().StringWithFallback(PDefaultLiveHostNo, "") != "" {
+			go handler.RefreshMapList(tabs, 0, `and state="0"`, `order by created asc, mapId`)
+		}
+		go handler.RefreshMapList(tabs, 1, `and state="1"`, `order by created desc, mapId`)
+		go handler.RefreshMapList(tabs, 2, `and star="1"`, `order by created desc, mapId`)
 	})
 	a.Lifecycle().SetOnStopped(func() {
 		log.Println("Lifecycle: Stopped")

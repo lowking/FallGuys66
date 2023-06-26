@@ -15,16 +15,3 @@ func FilterMap(msg client.Item) {
 		db.InsertMap(mapId, msg)
 	}
 }
-
-func main() {
-	FilterMap(client.Item{
-		Rid:     "",
-		Cid:     "",
-		Uid:     "",
-		Type:    "",
-		Txt:     "ceshi2345-2344-36343458-3455-3455",
-		Nn:      "",
-		Level:   "",
-		Payload: nil,
-	})
-}
