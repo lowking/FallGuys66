@@ -198,7 +198,7 @@ var listMapPlayed = [pageSize]model.MapInfo{}
 var listMapStar = [pageSize]model.MapInfo{}
 var listMap *[pageSize]model.MapInfo
 
-func RefreshMapList(driver fyne.Driver, window fyne.Window, tabs *container.AppTabs, idx int, where string, order string, recreate bool) {
+func RefreshMapList(driver fyne.Driver, window fyne.Window, tabs *container.AppTabs, idx int, where *model.MapInfo, order string, recreate bool) {
 	// 查询数据库获取最新列表
 	key := fmt.Sprintf("map%d", idx)
 	recreateKey := fmt.Sprintf("map%dRecreate", idx)
@@ -252,7 +252,10 @@ func RefreshMapList(driver fyne.Driver, window fyne.Window, tabs *container.AppT
 				window.Clipboard().SetContent(s)
 				go utils.FillMapId(s)
 				go func() {
-					db.UpdateMap(s, `state="1"`, `and mapId=? and state="0"`)
+					db.UpdateMap(
+						model.MapInfo{MapId: s, State: "1", PlayTime: time.Now()},
+						[]string{"State", "PlayTime"},
+						&model.MapInfo{State: "0"})
 					RefreshMapList(driver, window, tabs, idx, where, order, false)
 				}()
 			}
@@ -262,7 +265,10 @@ func RefreshMapList(driver fyne.Driver, window fyne.Window, tabs *container.AppT
 				window.Clipboard().SetContent(s)
 				go utils.FillMapId(s)
 				go func() {
-					db.UpdateMap(s, `star="1"`, `and mapId=? and star="0"`)
+					db.UpdateMap(
+						model.MapInfo{MapId: s, Star: "1"},
+						[]string{"Star"},
+						&model.MapInfo{Star: "0"})
 					RefreshMapList(driver, window, tabs, idx, where, order, false)
 				}()
 			}
@@ -272,7 +278,10 @@ func RefreshMapList(driver fyne.Driver, window fyne.Window, tabs *container.AppT
 				window.Clipboard().SetContent(s)
 				go utils.FillMapId(s)
 				go func() {
-					db.UpdateMap(s, `star="0"`, `and mapId=? and star="1"`)
+					db.UpdateMap(
+						model.MapInfo{MapId: s, Star: "0"},
+						[]string{"Star"},
+						&model.MapInfo{Star: "1"})
 					RefreshMapList(driver, window, tabs, idx, where, order, false)
 				}()
 			}
