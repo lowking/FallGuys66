@@ -62,7 +62,7 @@ func main() {
 	topWindow = window
 
 	// 菜单
-	window.SetMainMenu(makeMenu(application, window))
+	// window.SetMainMenu(makeMenu(application, window))
 	window.SetMaster()
 
 	logo := canvas.NewImageFromResource(data.LogoWhite)
