@@ -21,7 +21,7 @@ func FilterMap(msg client.Item) {
 			Uid:     msg.Uid,
 			Txt:     msg.Txt,
 			Level:   msg.Level,
-			Tst:     false,
+			Tst:     msg.Tst,
 			Created: time.Now(),
 		})
 	}

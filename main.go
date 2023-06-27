@@ -296,6 +296,7 @@ func main() {
 							Txt:     mapId,
 							Nn:      "",
 							Level:   "",
+							Tst:     true,
 							Payload: nil,
 						})
 					}

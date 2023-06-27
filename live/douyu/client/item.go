@@ -8,5 +8,6 @@ type Item struct {
 	Txt     string
 	Nn      string
 	Level   string
+	Tst     bool
 	Payload map[string]string
 }
