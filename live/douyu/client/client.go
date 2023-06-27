@@ -35,7 +35,7 @@ type DyBarrageWebSocketClient struct {
 	ws                  *websocket.Conn
 	MsgBreakers         DYtype.CodeBreakershandler
 	shouldStopHeartbeat bool
-	Config              *config.DMconfig
+	Config              *DMconfig.DMconfig
 	sentry              chan int
 	ItemIn              chan Item
 }

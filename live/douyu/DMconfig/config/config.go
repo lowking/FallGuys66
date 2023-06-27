@@ -1,4 +1,4 @@
-package config
+package DMconfig
 
 type DMconfig struct {
 	Rid            string

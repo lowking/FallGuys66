@@ -8,7 +8,7 @@ import (
 
 func main() {
 	webSocketClient := client.DyBarrageWebSocketClient{
-		Config: config.SpiderConfig,
+		Config: DMconfig.SpiderConfig,
 		MsgBreakers: DYtype.CodeBreakershandler{
 			IsLive: false,
 		},

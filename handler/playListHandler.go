@@ -1,7 +1,9 @@
 package handler
 
 import (
+	"FallGuys66/config"
 	"FallGuys66/db"
+	"FallGuys66/db/model"
 	"FallGuys66/utils"
 	"FallGuys66/widgets/headertable"
 	"fmt"
@@ -9,6 +11,7 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/data/binding"
 	"fyne.io/fyne/v2/widget"
+	"github.com/wesovilabs/koazee"
 	"time"
 )
 
@@ -185,7 +188,153 @@ var bsCellTempString = binding.BindString(&cellTempString)
 var mapIdTempString string
 var bsMapIdTempString = binding.BindString(&mapIdTempString)
 
-func RefreshMapList(driver fyne.Driver, window fyne.Window, tabs *container.AppTabs, idx int, where string, order string) {
+var ht *headertable.HeaderTable
+
+const pageSize = 18
+
+var listMap [pageSize]model.MapInfo
+
+func RefreshMapList(driver fyne.Driver, window fyne.Window, tabs *container.AppTabs, idx int, where string, order string, recreate bool) {
+	// 查询数据库获取最新列表
+	key := fmt.Sprintf("map%d", idx)
+	recreateKey := fmt.Sprintf("map%dRecreate", idx)
+	// 外部传入recreate或者缓存中是true，则重新new
+	tListMap := db.ListMap(1, pageSize, where, order)
+	listLength := len(tListMap)
+	recreate = recreate || cache[recreateKey] == "true" || listLength < len(listMap)
+	tListHeader := listHeader
+	if listLength > 0 {
+		cache[recreateKey] = "false"
+		for i := 0; i < listLength; i++ {
+			listMap[i] = tListMap[i]
+		}
+		if !recreate {
+			ht.Refresh()
+			return
+		}
+		bindingsMap[key] = make([]binding.Struct, listLength)
+		for i := 0; i < listLength; i++ {
+			bindingsMap[key][i] = binding.BindStruct(&listMap[i])
+		}
+		tListHeader.Bindings = bindingsMap[key]
+		ht = headertable.NewHeaderTable(&tListHeader)
+		cache[key] = listMap[0].MapId
+		firstItemAction := func() {
+			if s, err := bsCellTempString.Get(); err == nil {
+				window.Clipboard().SetContent(s)
+			}
+		}
+		firstMenuItem := fyne.NewMenuItem("", firstItemAction)
+		playMenuItem := fyne.NewMenuItem("游玩", func() {
+			if s, err := bsMapIdTempString.Get(); err == nil {
+				window.Clipboard().SetContent(s)
+				go utils.FillMapId(s)
+				go func() {
+					db.UpdateMap(s, `state="1"`, `and mapId=? and state="0"`)
+					RefreshMapList(driver, window, tabs, idx, where, order, false)
+				}()
+			}
+		})
+		starMenuItem := fyne.NewMenuItem("收藏", func() {
+			if s, err := bsMapIdTempString.Get(); err == nil {
+				window.Clipboard().SetContent(s)
+				go utils.FillMapId(s)
+				go func() {
+					db.UpdateMap(s, `star="1"`, `and mapId=? and star="0"`)
+					RefreshMapList(driver, window, tabs, idx, where, order, false)
+				}()
+			}
+		})
+		unStarMenuItem := fyne.NewMenuItem("取消收藏", func() {
+			if s, err := bsMapIdTempString.Get(); err == nil {
+				window.Clipboard().SetContent(s)
+				go utils.FillMapId(s)
+				go func() {
+					db.UpdateMap(s, `star="0"`, `and mapId=? and star="1"`)
+					RefreshMapList(driver, window, tabs, idx, where, order, false)
+				}()
+			}
+		})
+		tableMenu := fyne.NewMenu("Actions", firstMenuItem, playMenuItem, starMenuItem, unStarMenuItem)
+		ht.Data.OnSelected = func(id widget.TableCellID) {
+			row := bindingsMap[key][id.Row]
+			colKey := tListHeader.ColAttrs[id.Col].Name
+			if value, err := row.GetValue(colKey); err == nil {
+				// 每次点击记录地图Id
+				if mid, err := row.GetValue("MapId"); err == nil {
+					_ = bsMapIdTempString.Set(mid.(string))
+				}
+				// 处理单元格字符
+				valueString := ""
+				if s, ok := value.(string); ok {
+					valueString = s
+				} else if s, ok := value.(time.Time); ok {
+					valueString = s.Format("2006-01-02 15:04:05")
+				}
+
+				star, _ := row.GetValue("Star")
+				// 根据收藏状态，调整菜单显示
+				deleteTargetItem := starMenuItem
+				addTargetItem := unStarMenuItem
+				if star == "0" {
+					deleteTargetItem = unStarMenuItem
+					addTargetItem = starMenuItem
+				}
+				index := -1
+				for i, item := range tableMenu.Items {
+					if item.Label == deleteTargetItem.Label {
+						index = i
+						break
+					}
+				}
+				if index > -1 {
+					if slice, err := utils.DeleteSlice(tableMenu.Items, index); err == nil {
+						tableMenu.Items = slice.([]*fyne.MenuItem)
+					}
+				}
+				index = -1
+				for i, item := range tableMenu.Items {
+					if item.Label == addTargetItem.Label {
+						index = i
+						break
+					}
+				}
+				if index == -1 {
+					tableMenu.Items = append(tableMenu.Items, addTargetItem)
+				}
+
+				// 处理点击状态和收藏，移除第一个菜单
+				shouldBe := 3
+				switch colKey {
+				case "State", "Star", "Level":
+					if len(tableMenu.Items) == shouldBe {
+						_, stream := koazee.StreamOf(tableMenu.Items).Pop()
+						tableMenu.Items = stream.Out().Val().([]*fyne.MenuItem)
+					}
+				default:
+					if len(tableMenu.Items) < shouldBe {
+						newTableMenuItems := []*fyne.MenuItem{
+							firstMenuItem,
+						}
+						tableMenu.Items = append(newTableMenuItems, tableMenu.Items...)
+					}
+					tableMenu.Items[0].Label = valueString
+				}
+
+				_ = bsCellTempString.Set(valueString)
+
+				xx, yy := getCellPos(fyne.NewPos(0, 220), id.Col, id.Row, tListHeader, 36.1)
+				widget.NewPopUpMenu(tableMenu, window.Canvas()).ShowAtPosition(fyne.NewPos(xx, yy))
+			}
+		}
+		tabs.Items[idx].Content = container.NewMax(ht)
+	} else {
+		cache[recreateKey] = "true"
+		tabs.Items[idx].Content = utils.MakeEmptyList(config.AccentColor)
+	}
+}
+
+func RefreshMapList1(driver fyne.Driver, window fyne.Window, tabs *container.AppTabs, idx int, where string, order string) {
 	// 查询数据库获取最新列表
 	key := fmt.Sprintf("map%d", idx)
 	listMap := db.ListMap(1, 18, where, order)
@@ -205,23 +354,45 @@ func RefreshMapList(driver fyne.Driver, window fyne.Window, tabs *container.AppT
 			bindingsMap[key][i] = binding.BindStruct(&listMap[i])
 		}
 		tListHeader.Bindings = bindingsMap[key]
-		ht := headertable.NewHeaderTable(&tListHeader)
-		tabs.Items[idx].Content = container.NewMax(ht)
+		ht = headertable.NewHeaderTable(&tListHeader)
 		cache[key] = listMap[0].MapId
-		tableMenu := fyne.NewMenu(
-			"file",
-			fyne.NewMenuItem("", func() {
-				if s, err := bsCellTempString.Get(); err == nil {
-					window.Clipboard().SetContent(s)
-				}
-			}),
-			fyne.NewMenuItem("游玩", func() {
-				if s, err := bsMapIdTempString.Get(); err == nil {
-					window.Clipboard().SetContent(s)
-					go utils.FillMapId(s)
-				}
-			}),
-		)
+		firstItemAction := func() {
+			if s, err := bsCellTempString.Get(); err == nil {
+				window.Clipboard().SetContent(s)
+			}
+		}
+		firstMenuItem := fyne.NewMenuItem("", firstItemAction)
+		playMenuItem := fyne.NewMenuItem("游玩", func() {
+			if s, err := bsMapIdTempString.Get(); err == nil {
+				window.Clipboard().SetContent(s)
+				go utils.FillMapId(s)
+				go func() {
+					db.UpdateMap(s, `state="1"`, `and mapId=? and state="0"`)
+					RefreshMapList(driver, window, tabs, idx, where, order, false)
+				}()
+			}
+		})
+		starMenuItem := fyne.NewMenuItem("收藏", func() {
+			if s, err := bsMapIdTempString.Get(); err == nil {
+				window.Clipboard().SetContent(s)
+				go utils.FillMapId(s)
+				go func() {
+					db.UpdateMap(s, `star="1"`, `and mapId=? and star="0"`)
+					RefreshMapList(driver, window, tabs, idx, where, order, false)
+				}()
+			}
+		})
+		unStarMenuItem := fyne.NewMenuItem("取消收藏", func() {
+			if s, err := bsMapIdTempString.Get(); err == nil {
+				window.Clipboard().SetContent(s)
+				go utils.FillMapId(s)
+				go func() {
+					db.UpdateMap(s, `star="0"`, `and mapId=? and star="1"`)
+					RefreshMapList(driver, window, tabs, idx, where, order, false)
+				}()
+			}
+		})
+		tableMenu := fyne.NewMenu("Actions", firstMenuItem, playMenuItem, starMenuItem, unStarMenuItem)
 		ht.Data.OnSelected = func(id widget.TableCellID) {
 			row := bindingsMap[key][id.Row]
 			colKey := tListHeader.ColAttrs[id.Col].Name
@@ -239,13 +410,65 @@ func RefreshMapList(driver fyne.Driver, window fyne.Window, tabs *container.AppT
 				} else if s, ok := value.(time.Time); ok {
 					valueString = s.Format("2006-01-02 15:04:05")
 				}
-				tableMenu.Items[0].Label = valueString
+
+				star, _ := row.GetValue("Star")
+				// 根据收藏状态，调整菜单显示
+				deleteTargetItem := starMenuItem
+				addTargetItem := unStarMenuItem
+				if star == "0" {
+					deleteTargetItem = unStarMenuItem
+					addTargetItem = starMenuItem
+				}
+				index := -1
+				for i, item := range tableMenu.Items {
+					if item.Label == deleteTargetItem.Label {
+						index = i
+						break
+					}
+				}
+				if index > -1 {
+					if slice, err := utils.DeleteSlice(tableMenu.Items, index); err == nil {
+						tableMenu.Items = slice.([]*fyne.MenuItem)
+					}
+				}
+				index = -1
+				for i, item := range tableMenu.Items {
+					if item.Label == addTargetItem.Label {
+						index = i
+						break
+					}
+				}
+				if index == -1 {
+					tableMenu.Items = append(tableMenu.Items, addTargetItem)
+				}
+
+				// 处理点击状态和收藏，移除第一个菜单
+				shouldBe := 3
+				switch colKey {
+				case "State", "Star", "Level":
+					if len(tableMenu.Items) == shouldBe {
+						_, stream := koazee.StreamOf(tableMenu.Items).Pop()
+						tableMenu.Items = stream.Out().Val().([]*fyne.MenuItem)
+					}
+				default:
+					if len(tableMenu.Items) < shouldBe {
+						newTableMenuItems := []*fyne.MenuItem{
+							firstMenuItem,
+						}
+						tableMenu.Items = append(newTableMenuItems, tableMenu.Items...)
+					}
+					tableMenu.Items[0].Label = valueString
+				}
+
 				_ = bsCellTempString.Set(valueString)
 
 				xx, yy := getCellPos(tablePos, id.Col, id.Row, tListHeader, 36.1)
 				widget.NewPopUpMenu(tableMenu, window.Canvas()).ShowAtPosition(fyne.NewPos(xx, yy))
 			}
 		}
+		tabs.Items[idx].Content = container.NewMax(ht)
+	} else {
+		tabs.Items[idx].Content = utils.MakeEmptyList(config.AccentColor)
 	}
 }
 

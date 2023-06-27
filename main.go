@@ -2,6 +2,7 @@
 package main
 
 import (
+	"FallGuys66/config"
 	"FallGuys66/data"
 	_ "FallGuys66/db"
 	"FallGuys66/handler"
@@ -94,20 +95,8 @@ func main() {
 	elements = append(elements, cLogoBlack)
 
 	// 直播间label
-	accentColor := color.RGBA{
-		R: 46,
-		G: 108,
-		B: 246,
-		A: 255,
-	}
-	shadowColor := color.RGBA{
-		R: 66,
-		G: 66,
-		B: 66,
-		A: 255,
-	}
-	lLiveHostLabel := canvas.NewText("直播间：", accentColor)
-	lLiveHostShadowLabel := canvas.NewText("直播间：", shadowColor)
+	lLiveHostLabel := canvas.NewText("直播间：", config.AccentColor)
+	lLiveHostShadowLabel := canvas.NewText("直播间：", config.ShadowColor)
 	lLiveHostLabel.TextSize = 35
 	lLiveHostShadowLabel.TextSize = 35
 	lLiveHostLabel.Move(fyne.NewPos(toolbarPaddingLeft, toolbarPaddingTop))
@@ -190,10 +179,21 @@ func main() {
 
 	// 初始化tab列表
 	tabs = container.NewAppTabs(
-		container.NewTabItem("未玩列表", makeEmptyList(accentColor)),
-		container.NewTabItem("已玩列表", makeEmptyList(accentColor)),
-		container.NewTabItem("收藏列表", makeEmptyList(accentColor)),
+		container.NewTabItem("未玩列表", utils.MakeEmptyList(config.AccentColor)),
+		container.NewTabItem("已玩列表", utils.MakeEmptyList(config.AccentColor)),
+		container.NewTabItem("收藏列表", utils.MakeEmptyList(config.AccentColor)),
 	)
+	tabs.OnSelected = func(item *container.TabItem) {
+		logger.Infof("selected: %v", item.Text)
+		switch item.Text {
+		case "未玩列表":
+			go handler.RefreshMapList(driver, window, tabs, 0, `and state="0"`, `order by created asc, mapId`, false)
+		case "已玩列表":
+			go handler.RefreshMapList(driver, window, tabs, 1, `and state="1"`, `order by created desc, mapId`, false)
+		case "收藏列表":
+			go handler.RefreshMapList(driver, window, tabs, 2, `and star="1"`, `order by created desc, mapId`, false)
+		}
+	}
 	cTabList := container.NewBorder(nil, nil, nil, nil, tabs)
 	cTabList.Move(fyne.NewPos(0, cLogo.Size().Height+padding*3))
 	cTabList.Resize(fyne.NewSize(appSize.Width, appSize.Height-cLogo.Size().Height))
@@ -243,7 +243,7 @@ func main() {
 			if liveHost != "dev" {
 				// todo 连接弹幕
 				logger.Infof("connecting douyu: %s", liveHost)
-				spiderConfig := &config.DMconfig{
+				spiderConfig := &DMconfig.DMconfig{
 					Rid:            liveHost,
 					LoginMsg:       "type@=loginreq/room_id@=%s/dfl@=sn@A=105@Sss@A=1/username@=%s/uid@=%s/ver@=20190610/aver@=218101901/ct@=0/",
 					LoginJoinGroup: "type@=joingroup/rid@=%s/gid@=-9999/",
@@ -387,13 +387,6 @@ func btnConSetDefault(btnCon *widget.Button, liveHostOption *widget.SelectEntry)
 	liveHostOption.Show()
 }
 
-func makeEmptyList(accentColor color.RGBA) *fyne.Container {
-	text := canvas.NewText("无数据 ...", accentColor)
-	text.TextSize = 20
-	cEmpty := container.NewCenter(text)
-	return cEmpty
-}
-
 func flashEle(times int, elements ...*fyne.Container) {
 	for i := 0; i < times; i++ {
 		time.Sleep(time.Duration(rand.Intn(100)) * time.Millisecond)
@@ -452,10 +445,10 @@ func logLifecycle(a fyne.App) {
 		log.Println("Lifecycle: Started")
 		// 第一次加载列表
 		if a.Preferences().StringWithFallback(PDefaultLiveHostNo, "") != "" {
-			go handler.RefreshMapList(driver, window, tabs, 0, `and state="0"`, `order by created asc, mapId`)
+			go handler.RefreshMapList(driver, window, tabs, 0, `and state="0"`, `order by created asc, mapId`, true)
 		}
-		go handler.RefreshMapList(driver, window, tabs, 1, `and state="1"`, `order by created desc, mapId`)
-		go handler.RefreshMapList(driver, window, tabs, 2, `and star="1"`, `order by created desc, mapId`)
+		go handler.RefreshMapList(driver, window, tabs, 1, `and state="1"`, `order by created desc, mapId`, true)
+		go handler.RefreshMapList(driver, window, tabs, 2, `and star="1"`, `order by created desc, mapId`, true)
 	})
 	a.Lifecycle().SetOnStopped(func() {
 		log.Println("Lifecycle: Stopped")
@@ -463,9 +456,9 @@ func logLifecycle(a fyne.App) {
 	a.Lifecycle().SetOnEnteredForeground(func() {
 		log.Println("Lifecycle: Entered Foreground")
 		// 每次聚焦窗口刷新列表
-		go handler.RefreshMapList(driver, window, tabs, 0, `and state="0"`, `order by created asc, mapId`)
-		go handler.RefreshMapList(driver, window, tabs, 1, `and state="1"`, `order by created desc, mapId`)
-		go handler.RefreshMapList(driver, window, tabs, 2, `and star="1"`, `order by created desc, mapId`)
+		go handler.RefreshMapList(driver, window, tabs, 0, `and state="0"`, `order by created asc, mapId`, false)
+		go handler.RefreshMapList(driver, window, tabs, 1, `and state="1"`, `order by created desc, mapId`, false)
+		go handler.RefreshMapList(driver, window, tabs, 2, `and star="1"`, `order by created desc, mapId`, false)
 	})
 	a.Lifecycle().SetOnExitedForeground(func() {
 		log.Println("Lifecycle: Exited Foreground")

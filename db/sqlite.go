@@ -41,7 +41,7 @@ func init() {
 
 func checkErr(err error) {
 	if err != nil {
-		debug.Stack()
+		debug.PrintStack()
 		logger.Errorf("error: %v", err)
 	}
 }
@@ -84,4 +84,11 @@ func ListMap(pageNo int, pageSize int, where string, order string) []model.MapIn
 	_ = rows.Close()
 
 	return mapInfos
+}
+
+func UpdateMap(mid string, set string, where string) {
+	stmt, err := Db.Prepare(fmt.Sprintf("update mapinfo set %s where 1=1 %s", set, where))
+	checkErr(err)
+	_, err = stmt.Exec(mid)
+	checkErr(err)
 }
