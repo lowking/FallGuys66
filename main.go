@@ -37,6 +37,7 @@ const PLiveHosts = "LiveHosts"
 
 var topWindow fyne.Window
 var tabs *container.AppTabs
+var version = "1.0.0-beta"
 
 func main() {
 	logoSize := float32(90)
@@ -319,19 +320,20 @@ func main() {
 				// 保存默认值
 				application.Preferences().SetString(PDefaultLiveHostNo, liveHost)
 
+				// 改成每次聚焦刷新，无需轮训刷新
 				// 定时查询获取最新地图
-				go func() {
-					for {
-						time.Sleep(2 * time.Second)
-						if btnCon.Importance != widget.HighImportance {
-							log.Printf("exit query loop")
-							return
-						}
-						go handler.RefreshMapList(tabs, 0, `and state="0"`, `order by created asc, mapId`)
-						go handler.RefreshMapList(tabs, 1, `and state="1"`, `order by created desc, mapId`)
-						go handler.RefreshMapList(tabs, 2, `and star="1"`, `order by created desc, mapId`)
-					}
-				}()
+				// go func() {
+				// 	for {
+				// 		time.Sleep(2 * time.Second)
+				// 		if btnCon.Importance != widget.HighImportance {
+				// 			log.Printf("exit query loop")
+				// 			return
+				// 		}
+				// 		go handler.RefreshMapList(tabs, 0, `and state="0"`, `order by created asc, mapId`)
+				// 		go handler.RefreshMapList(tabs, 1, `and state="1"`, `order by created desc, mapId`)
+				// 		go handler.RefreshMapList(tabs, 2, `and star="1"`, `order by created desc, mapId`)
+				// 	}
+				// }()
 			} else {
 				// 连接失败
 				btnCon.Importance = widget.DangerImportance
@@ -352,6 +354,19 @@ func main() {
 	cBtnCon.Resize(fyne.NewSize(65, 36))
 	cBtnCon.Move(fyne.NewPos(cLogo.Size().Width+toolbarPaddingLeft+70+padding*2+offsetX, toolbarPaddingTop+offsetY))
 	elements = append(elements, cBtnCon)
+
+	// 版本信息
+	versionColor := color.RGBA{
+		R: 43,
+		G: 87,
+		B: 188,
+		A: 255,
+	}
+	versionText := canvas.NewText(fmt.Sprintf("v%s", version), versionColor)
+	versionText.TextSize = 14
+	versionText.Alignment = fyne.TextAlignTrailing
+	versionText.Move(fyne.NewPos(appSize.Width-10, 0))
+	elements = append(elements, versionText)
 
 	gridLayout := container.NewWithoutLayout(elements...)
 
