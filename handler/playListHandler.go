@@ -252,9 +252,9 @@ func RefreshMapList(driver fyne.Driver, window fyne.Window, tabs *container.AppT
 func getCellPos(base fyne.Position, x int, y int, header headertable.TableOpts, cellHeight float32) (float32, float32) {
 	xx := base.X
 	yy := base.Y
-	for i := 0; i <= x; i++ {
+	for i := 0; i < x; i++ {
 		xx += float32(header.ColAttrs[i].WidthPercent) + 15
 	}
 
-	return xx, yy + (float32(y)+0.7)*cellHeight
+	return xx + 15, yy + (float32(y)+0.7)*cellHeight
 }
