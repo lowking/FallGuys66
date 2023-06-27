@@ -1,6 +1,8 @@
 package utils
 
-import "sort"
+import (
+	"sort"
+)
 
 func In(strArray []string, target string) bool {
 	sort.Strings(strArray)
@@ -9,4 +11,7 @@ func In(strArray []string, target string) bool {
 		return true
 	}
 	return false
+}
+
+func FillMapId(id string) {
 }

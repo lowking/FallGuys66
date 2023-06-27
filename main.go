@@ -38,6 +38,8 @@ const PLiveHosts = "LiveHosts"
 var topWindow fyne.Window
 var tabs *container.AppTabs
 var version = "1.0.0-beta"
+var driver fyne.Driver
+var window fyne.Window
 
 func main() {
 	logoSize := float32(90)
@@ -46,7 +48,7 @@ func main() {
 	offsetY := float32(3)
 	toolbarPaddingTop := padding + 10
 	toolbarPaddingLeft := float32(120)
-	appSize := fyne.NewSize(1230, 870)
+	appSize := fyne.NewSize(1020, 870)
 	application := app.NewWithID("pro.lowking.fallguys66")
 	application.Settings().SetTheme(&data.MyTheme{
 		Regular:    data.FontSmileySansOblique,
@@ -56,10 +58,11 @@ func main() {
 		Monospace:  data.FontSmileySansOblique,
 	})
 	application.SetIcon(data.LogoWhite)
+	driver = application.Driver()
 	// 托盘图标
 	makeTray(application)
 	logLifecycle(application)
-	window := application.NewWindow("糖豆人直播助手：大周定制版")
+	window = application.NewWindow("糖豆人直播助手：大周定制版")
 	topWindow = window
 
 	// 菜单
@@ -449,10 +452,10 @@ func logLifecycle(a fyne.App) {
 		log.Println("Lifecycle: Started")
 		// 第一次加载列表
 		if a.Preferences().StringWithFallback(PDefaultLiveHostNo, "") != "" {
-			go handler.RefreshMapList(tabs, 0, `and state="0"`, `order by created asc, mapId`)
+			go handler.RefreshMapList(driver, window, tabs, 0, `and state="0"`, `order by created asc, mapId`)
 		}
-		go handler.RefreshMapList(tabs, 1, `and state="1"`, `order by created desc, mapId`)
-		go handler.RefreshMapList(tabs, 2, `and star="1"`, `order by created desc, mapId`)
+		go handler.RefreshMapList(driver, window, tabs, 1, `and state="1"`, `order by created desc, mapId`)
+		go handler.RefreshMapList(driver, window, tabs, 2, `and star="1"`, `order by created desc, mapId`)
 	})
 	a.Lifecycle().SetOnStopped(func() {
 		log.Println("Lifecycle: Stopped")
@@ -460,9 +463,9 @@ func logLifecycle(a fyne.App) {
 	a.Lifecycle().SetOnEnteredForeground(func() {
 		log.Println("Lifecycle: Entered Foreground")
 		// 每次聚焦窗口刷新列表
-		go handler.RefreshMapList(tabs, 0, `and state="0"`, `order by created asc, mapId`)
-		go handler.RefreshMapList(tabs, 1, `and state="1"`, `order by created desc, mapId`)
-		go handler.RefreshMapList(tabs, 2, `and star="1"`, `order by created desc, mapId`)
+		go handler.RefreshMapList(driver, window, tabs, 0, `and state="0"`, `order by created asc, mapId`)
+		go handler.RefreshMapList(driver, window, tabs, 1, `and state="1"`, `order by created desc, mapId`)
+		go handler.RefreshMapList(driver, window, tabs, 2, `and star="1"`, `order by created desc, mapId`)
 	})
 	a.Lifecycle().SetOnExitedForeground(func() {
 		log.Println("Lifecycle: Exited Foreground")
