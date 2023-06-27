@@ -4,6 +4,7 @@ import (
 	"FallGuys66/config"
 	"FallGuys66/db"
 	"FallGuys66/db/model"
+	"FallGuys66/live/douyu/lib/logger"
 	"FallGuys66/utils"
 	"FallGuys66/widgets/headertable"
 	"fmt"
@@ -183,6 +184,7 @@ const pageSize = 18
 
 var cache = make(map[string]string)
 var cacheHt = make(map[string]*headertable.HeaderTable)
+var cacheListHeader = make(map[string]headertable.TableOpts)
 var bindingsMap = make(map[string][]binding.Struct, 1)
 
 // 点击时临时存储单元格内容
@@ -191,9 +193,9 @@ var bsCellTempString = binding.BindString(&cellTempString)
 var mapIdTempString string
 var bsMapIdTempString = binding.BindString(&mapIdTempString)
 
-var listMapPlay [pageSize]model.MapInfo
-var listMapPlayed [pageSize]model.MapInfo
-var listMapStar [pageSize]model.MapInfo
+var listMapPlay = [pageSize]model.MapInfo{}
+var listMapPlayed = [pageSize]model.MapInfo{}
+var listMapStar = [pageSize]model.MapInfo{}
 var listMap *[pageSize]model.MapInfo
 
 func RefreshMapList(driver fyne.Driver, window fyne.Window, tabs *container.AppTabs, idx int, where string, order string, recreate bool) {
@@ -203,6 +205,7 @@ func RefreshMapList(driver fyne.Driver, window fyne.Window, tabs *container.AppT
 	// 外部传入recreate或者缓存中是true，则重新new
 	tListMap := db.ListMap(1, pageSize, where, order)
 	listLength := len(tListMap)
+	cacheListHeader[key] = listHeader
 	switch idx {
 	case 0:
 		listMap = &listMapPlay
@@ -211,8 +214,9 @@ func RefreshMapList(driver fyne.Driver, window fyne.Window, tabs *container.AppT
 	case 2:
 		listMap = &listMapStar
 	}
-	recreate = recreate || cache[recreateKey] == "true" || listLength < len(*listMap)
-	tListHeader := listHeader
+	// logger.Debugf("%v", listMap)
+	recreate = recreate || cache[recreateKey] == "true" || listLength < pageSize || cacheHt[key] == nil
+	tListHeader := cacheListHeader[key]
 	if listLength > 0 {
 		cache[recreateKey] = "false"
 		if cacheHt[key] == nil {
@@ -222,7 +226,12 @@ func RefreshMapList(driver fyne.Driver, window fyne.Window, tabs *container.AppT
 			(*listMap)[i] = tListMap[i]
 		}
 		if !recreate {
+			logger.Debugf("current index: %d, cacheHt: %v", idx, cacheHt)
+			if cacheHt[key].Data != nil {
+				cacheHt[key].Data.UnselectAll()
+			}
 			cacheHt[key].Refresh()
+			logger.Infof("refresh finish, total: %v", len(tListMap))
 			return
 		}
 		bindingsMap[key] = make([]binding.Struct, listLength)
@@ -342,6 +351,7 @@ func RefreshMapList(driver fyne.Driver, window fyne.Window, tabs *container.AppT
 		}
 		tabs.Items[idx].Content = container.NewMax(cacheHt[key])
 	} else {
+		logger.Infof("idx: %d %s", idx, recreateKey)
 		cache[recreateKey] = "true"
 		tabs.Items[idx].Content = utils.MakeEmptyList(config.AccentColor)
 	}

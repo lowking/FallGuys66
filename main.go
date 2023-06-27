@@ -16,7 +16,6 @@ import (
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/cmd/fyne_demo/tutorials"
-	"fyne.io/fyne/v2/cmd/fyne_settings/settings"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/driver/desktop"
@@ -25,7 +24,6 @@ import (
 	"image/color"
 	"log"
 	"math/rand"
-	"net/url"
 	"strconv"
 	"strings"
 	"sync"
@@ -184,7 +182,6 @@ func main() {
 		container.NewTabItem("收藏列表", utils.MakeEmptyList(config.AccentColor)),
 	)
 	tabs.OnSelected = func(item *container.TabItem) {
-		logger.Infof("selected: %v", item.Text)
 		switch item.Text {
 		case "未玩列表":
 			go handler.RefreshMapList(driver, window, tabs, 0, `and state="0"`, `order by created asc, mapId`, false)
@@ -301,7 +298,7 @@ func main() {
 							Payload: nil,
 						})
 					}
-					logger.Infof("mock %d map", count)
+					logger.Debugf("mock %d map", count)
 				}()
 			}
 			if connectSuc {
@@ -359,17 +356,18 @@ func main() {
 	elements = append(elements, cBtnCon)
 
 	// 版本信息
-	versionColor := color.RGBA{
-		R: 43,
-		G: 87,
-		B: 188,
-		A: 255,
-	}
-	versionText := canvas.NewText(fmt.Sprintf("v%s", version), versionColor)
+	versionText := canvas.NewText(fmt.Sprintf("v%s", version), config.VersionColor)
 	versionText.TextSize = 14
 	versionText.Alignment = fyne.TextAlignTrailing
 	versionText.Move(fyne.NewPos(appSize.Width-10, 0))
 	elements = append(elements, versionText)
+
+	// 说明，从远程获取
+	remarkText := widget.NewRichTextFromMarkdown(config.RemarkText)
+	remarkText.Wrapping = fyne.TextWrapBreak
+	remarkText.Resize(fyne.NewSize(540, 100))
+	remarkText.Move(fyne.NewPos(470, 14))
+	elements = append(elements, remarkText)
 
 	gridLayout := container.NewWithoutLayout(elements...)
 
@@ -447,8 +445,8 @@ func logLifecycle(a fyne.App) {
 		if a.Preferences().StringWithFallback(PDefaultLiveHostNo, "") != "" {
 			go handler.RefreshMapList(driver, window, tabs, 0, `and state="0"`, `order by created asc, mapId`, true)
 		}
-		go handler.RefreshMapList(driver, window, tabs, 1, `and state="1"`, `order by created desc, mapId`, true)
-		go handler.RefreshMapList(driver, window, tabs, 2, `and star="1"`, `order by created desc, mapId`, true)
+		// go handler.RefreshMapList(driver, window, tabs, 1, `and state="1"`, `order by created desc, mapId`, true)
+		// go handler.RefreshMapList(driver, window, tabs, 2, `and star="1"`, `order by created desc, mapId`, true)
 	})
 	a.Lifecycle().SetOnStopped(func() {
 		log.Println("Lifecycle: Stopped")
@@ -463,97 +461,6 @@ func logLifecycle(a fyne.App) {
 	a.Lifecycle().SetOnExitedForeground(func() {
 		log.Println("Lifecycle: Exited Foreground")
 	})
-}
-
-func makeMenu(a fyne.App, w fyne.Window) *fyne.MainMenu {
-	newItem := fyne.NewMenuItem("New", nil)
-	checkedItem := fyne.NewMenuItem("Checked", nil)
-	checkedItem.Checked = true
-	disabledItem := fyne.NewMenuItem("Disabled", nil)
-	disabledItem.Disabled = true
-	otherItem := fyne.NewMenuItem("Other", nil)
-	mailItem := fyne.NewMenuItem("Mail", func() { logger.Debug("Menu New->Other->Mail") })
-	mailItem.Icon = theme.MailComposeIcon()
-	otherItem.ChildMenu = fyne.NewMenu("",
-		fyne.NewMenuItem("Project", func() { logger.Debug("Menu New->Other->Project") }),
-		mailItem,
-	)
-	fileItem := fyne.NewMenuItem("File", func() { logger.Debug("Menu New->File") })
-	fileItem.Icon = theme.FileIcon()
-	dirItem := fyne.NewMenuItem("Directory", func() { logger.Debug("Menu New->Directory") })
-	dirItem.Icon = theme.FolderIcon()
-	newItem.ChildMenu = fyne.NewMenu("",
-		fileItem,
-		dirItem,
-		otherItem,
-	)
-
-	openSettings := func() {
-		w := a.NewWindow("Fyne Settings")
-		w.SetContent(settings.NewSettings().LoadAppearanceScreen(w))
-		w.Resize(fyne.NewSize(480, 480))
-		w.Show()
-	}
-	settingsItem := fyne.NewMenuItem("Settings", openSettings)
-	settingsShortcut := &desktop.CustomShortcut{KeyName: fyne.KeyComma, Modifier: fyne.KeyModifierShortcutDefault}
-	settingsItem.Shortcut = settingsShortcut
-	w.Canvas().AddShortcut(settingsShortcut, func(shortcut fyne.Shortcut) {
-		openSettings()
-	})
-
-	cutShortcut := &fyne.ShortcutCut{Clipboard: w.Clipboard()}
-	cutItem := fyne.NewMenuItem("Cut", func() {
-		shortcutFocused(cutShortcut, w)
-	})
-	cutItem.Shortcut = cutShortcut
-	copyShortcut := &fyne.ShortcutCopy{Clipboard: w.Clipboard()}
-	copyItem := fyne.NewMenuItem("Copy", func() {
-		shortcutFocused(copyShortcut, w)
-	})
-	copyItem.Shortcut = copyShortcut
-	pasteShortcut := &fyne.ShortcutPaste{Clipboard: w.Clipboard()}
-	pasteItem := fyne.NewMenuItem("Paste", func() {
-		shortcutFocused(pasteShortcut, w)
-	})
-	pasteItem.Shortcut = pasteShortcut
-	performFind := func() { logger.Debug("Menu Find") }
-	findItem := fyne.NewMenuItem("Find", performFind)
-	findItem.Shortcut = &desktop.CustomShortcut{KeyName: fyne.KeyF, Modifier: fyne.KeyModifierShortcutDefault | fyne.KeyModifierAlt | fyne.KeyModifierShift | fyne.KeyModifierControl | fyne.KeyModifierSuper}
-	w.Canvas().AddShortcut(findItem.Shortcut, func(shortcut fyne.Shortcut) {
-		performFind()
-	})
-
-	helpMenu := fyne.NewMenu("Help",
-		fyne.NewMenuItem("Documentation", func() {
-			u, _ := url.Parse("https://developer.fyne.io")
-			_ = a.OpenURL(u)
-		}),
-		fyne.NewMenuItem("Support", func() {
-			u, _ := url.Parse("https://fyne.io/support/")
-			_ = a.OpenURL(u)
-		}),
-		fyne.NewMenuItemSeparator(),
-		fyne.NewMenuItem("Sponsor", func() {
-			u, _ := url.Parse("https://fyne.io/sponsor/")
-			_ = a.OpenURL(u)
-		}))
-
-	// a quit item will be appended to our first (File) menu
-	file := fyne.NewMenu("File", newItem, checkedItem, disabledItem)
-	device := fyne.CurrentDevice()
-	if !device.IsMobile() && !device.IsBrowser() {
-		file.Items = append(file.Items, fyne.NewMenuItemSeparator(), settingsItem)
-	}
-	main := fyne.NewMainMenu(
-		file,
-		fyne.NewMenu("Edit", cutItem, copyItem, pasteItem, fyne.NewMenuItemSeparator(), findItem),
-		helpMenu,
-	)
-	checkedItem.Action = func() {
-		checkedItem.Checked = !checkedItem.Checked
-		main.Refresh()
-	}
-	return main
 }
 
 func makeTray(a fyne.App) {

@@ -68,7 +68,7 @@ func (c CodeBreakershandler) Encode(msg string) []byte {
 func (c CodeBreakershandler) Decode(msgBytes []byte) []string {
 	defer func() {
 		if err := recover(); err != nil {
-			logger.Errorf("出了错：%v msgBytes：%x msgStr: %s", err, msgBytes, string(msgBytes))
+			logger.Errorf("%v msgBytes：%x msgStr: %s", err, msgBytes, string(msgBytes))
 		}
 	}()
 	pos := 0
