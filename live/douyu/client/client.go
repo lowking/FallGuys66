@@ -57,6 +57,15 @@ func (d *DyBarrageWebSocketClient) Start() {
 
 // Stop:停止
 func (d *DyBarrageWebSocketClient) Stop() {
+	// 避免还未连接就点断开，导致连接未关闭
+	count := 0
+	for {
+		time.Sleep(1 * time.Second)
+		if d.ws != nil || count >= 10 {
+			break
+		}
+		count++
+	}
 	_ = d.ws.Close()
 	d.logout()
 }
