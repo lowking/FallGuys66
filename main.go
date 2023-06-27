@@ -27,6 +27,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -38,7 +39,13 @@ var topWindow fyne.Window
 var tabs *container.AppTabs
 
 func main() {
-	appSize := fyne.NewSize(995, 850)
+	logoSize := float32(90)
+	padding := float32(10)
+	offsetX := float32(-50)
+	offsetY := float32(3)
+	toolbarPaddingTop := padding + 10
+	toolbarPaddingLeft := float32(120)
+	appSize := fyne.NewSize(1230, 870)
 	application := app.NewWithID("pro.lowking.fallguys66")
 	application.Settings().SetTheme(&data.MyTheme{
 		Regular:    data.FontSmileySansOblique,
@@ -59,17 +66,15 @@ func main() {
 	window.SetMaster()
 
 	logo := canvas.NewImageFromResource(data.LogoWhite)
-	logoSize := 90
-	logo.SetMinSize(fyne.NewSize(float32(logoSize), float32(logoSize)))
+	logo.SetMinSize(fyne.NewSize(logoSize, logoSize))
 	cLogo := container.NewCenter(logo)
 	cLogo.Resize(fyne.NewSize(100, 100))
 	logoBlack := canvas.NewImageFromResource(data.LogoBlack)
-	logoBlack.SetMinSize(fyne.NewSize(float32(logoSize), float32(logoSize)))
+	logoBlack.SetMinSize(fyne.NewSize(logoSize, logoSize))
 	cLogoBlack := container.NewCenter(logoBlack)
 	cLogoBlack.Resize(fyne.NewSize(100, 100))
-	padding := 10
-	cLogo.Move(fyne.NewPos(float32(padding), float32(padding+10)))
-	cLogoBlack.Move(fyne.NewPos(float32(padding), float32(padding+10)))
+	cLogo.Move(fyne.NewPos(padding, padding+10))
+	cLogoBlack.Move(fyne.NewPos(padding, padding+10))
 	cLogoBlack.Hide()
 	go func() {
 		for {
@@ -91,11 +96,19 @@ func main() {
 		B: 246,
 		A: 255,
 	}
+	shadowColor := color.RGBA{
+		R: 66,
+		G: 66,
+		B: 66,
+		A: 255,
+	}
 	lLiveHostLabel := canvas.NewText("直播间：", accentColor)
+	lLiveHostShadowLabel := canvas.NewText("直播间：", shadowColor)
 	lLiveHostLabel.TextSize = 35
-	toolbarPaddingTop := padding + 10
-	toolbarPaddingLeft := 120
-	lLiveHostLabel.Move(fyne.NewPos(float32(toolbarPaddingLeft), float32(toolbarPaddingTop)))
+	lLiveHostShadowLabel.TextSize = 35
+	lLiveHostLabel.Move(fyne.NewPos(toolbarPaddingLeft, toolbarPaddingTop))
+	lLiveHostShadowLabel.Move(fyne.NewPos(toolbarPaddingLeft+1, toolbarPaddingTop+1))
+	elements = append(elements, lLiveHostShadowLabel)
 	elements = append(elements, lLiveHostLabel)
 
 	optionSize := fyne.NewSize(140, 37)
@@ -108,7 +121,7 @@ func main() {
 		A: 255,
 	})
 	tLiveHostNo.TextSize = 35
-	tLiveHostNo.Move(fyne.NewPos(cLogo.Size().Width+40+optionSize.Width+float32(padding*2), float32(toolbarPaddingTop)))
+	tLiveHostNo.Move(fyne.NewPos(cLogo.Size().Width+toolbarPaddingLeft+optionSize.Width+padding*2+offsetX, toolbarPaddingTop+offsetY-3))
 	elements = append(elements, tLiveHostNo)
 	liveHosts := []string{
 		"156277",
@@ -130,7 +143,7 @@ func main() {
 	liveHostOption.SetText(defaultLiveHostNo)
 	cLiveHostOption := container.NewMax(liveHostOption)
 	cLiveHostOption.Resize(optionSize)
-	cLiveHostOption.Move(fyne.NewPos(cLogo.Size().Width+40+optionSize.Width+float32(padding*2), float32(toolbarPaddingTop)))
+	cLiveHostOption.Move(fyne.NewPos(cLogo.Size().Width+toolbarPaddingLeft+optionSize.Width+padding*2+offsetX, toolbarPaddingTop+offsetY))
 	elements = append(elements, cLiveHostOption)
 
 	// 初始化copyright
@@ -153,7 +166,7 @@ func main() {
 	lCopyrightR.TextSize = 14
 	lCopyrightR.Alignment = fyne.TextAlignTrailing
 	// lCopyrightR.Move(fyne.NewPos(appSize.Width-10, appSize.Height-25))
-	lCopyrightR.Move(fyne.NewPos(appSize.Width-110, 140))
+	lCopyrightR.Move(fyne.NewPos(appSize.Width-130, 140))
 	elements = append(elements, lCopyrightL)
 	elements = append(elements, lCopyrightR)
 
@@ -178,7 +191,7 @@ func main() {
 		container.NewTabItem("收藏列表", makeEmptyList(accentColor)),
 	)
 	cTabList := container.NewBorder(nil, nil, nil, nil, tabs)
-	cTabList.Move(fyne.NewPos(0, cLogo.Size().Height+float32(padding*3)))
+	cTabList.Move(fyne.NewPos(0, cLogo.Size().Height+padding*3))
 	cTabList.Resize(fyne.NewSize(appSize.Width, appSize.Height-cLogo.Size().Height))
 	elements = append(elements, cTabList)
 
@@ -196,7 +209,12 @@ func main() {
 	// 连接直播间按钮
 	var webSocketClient client.DyBarrageWebSocketClient
 	var btnCon *widget.Button
+	var lock sync.Mutex
 	btnCon = widget.NewButtonWithIcon("连接", theme.NavigateNextIcon(), func() {
+		if !lock.TryLock() {
+			return
+		}
+		defer lock.Unlock()
 		if liveHost == "" {
 			btnConSetDefault(btnCon, liveHostOption)
 			dialog.ShowInformation("提示", "请填写斗鱼直播间号", window)
@@ -303,8 +321,6 @@ func main() {
 
 				// 定时查询获取最新地图
 				go func() {
-					// playedMapList := tabs.Items[1]
-					// starMapList := tabs.Items[2]
 					for {
 						time.Sleep(2 * time.Second)
 						if btnCon.Importance != widget.HighImportance {
@@ -326,7 +342,7 @@ func main() {
 			// 连接中 已连接，再次点击断开连接，状态设置成未连接
 			btnConSetDefault(btnCon, liveHostOption)
 			if liveHost != "dev" {
-				webSocketClient.Stop()
+				go webSocketClient.Stop()
 			}
 		}
 		btnCon.Refresh()
@@ -334,7 +350,7 @@ func main() {
 	btnCon.Importance = widget.MediumImportance
 	cBtnCon := container.NewMax(btnCon)
 	cBtnCon.Resize(fyne.NewSize(65, 36))
-	cBtnCon.Move(fyne.NewPos(cLogo.Size().Width+120+float32(padding), float32(toolbarPaddingTop)))
+	cBtnCon.Move(fyne.NewPos(cLogo.Size().Width+toolbarPaddingLeft+70+padding*2+offsetX, toolbarPaddingTop+offsetY))
 	elements = append(elements, cBtnCon)
 
 	gridLayout := container.NewWithoutLayout(elements...)
@@ -428,6 +444,10 @@ func logLifecycle(a fyne.App) {
 	})
 	a.Lifecycle().SetOnEnteredForeground(func() {
 		log.Println("Lifecycle: Entered Foreground")
+		// 每次聚焦窗口刷新列表
+		go handler.RefreshMapList(tabs, 0, `and state="0"`, `order by created asc, mapId`)
+		go handler.RefreshMapList(tabs, 1, `and state="1"`, `order by created desc, mapId`)
+		go handler.RefreshMapList(tabs, 2, `and star="1"`, `order by created desc, mapId`)
 	})
 	a.Lifecycle().SetOnExitedForeground(func() {
 		log.Println("Lifecycle: Exited Foreground")

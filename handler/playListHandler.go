@@ -92,7 +92,8 @@ var listHeader = headertable.TableOpts{
 				if t == "0" {
 					return ""
 				} else {
-					return "---"
+					// return "---"
+					return "🎮"
 				}
 			},
 		},
@@ -112,7 +113,7 @@ var listHeader = headertable.TableOpts{
 				if t == "0" {
 					return ""
 				} else {
-					return "♥️"
+					return "★"
 				}
 			},
 		},
@@ -129,7 +130,7 @@ var listHeader = headertable.TableOpts{
 			WidthPercent: 390,
 			Converter: func(i interface{}) string {
 				t := i.(string)
-				rowLen := 40
+				rowLen := 38
 				ret := warpStr(t, rowLen)
 				return ret
 			},
@@ -180,13 +181,14 @@ func RefreshMapList(tabs *container.AppTabs, idx int, where string, order string
 	listLength := len(listMap)
 	tListHeader := listHeader
 	if listLength > 0 {
-		if len(bindingsMap[key]) > 0 && bindingsMap[key][0] != nil {
-			if val, err := bindingsMap[key][0].GetValue("MapId"); err == nil {
-				if val == cache[key] {
-					return
-				}
-			}
-		}
+		// 已经去掉了轮训刷新，无需校验缓存
+		// if len(bindingsMap[key]) > 0 && bindingsMap[key][0] != nil {
+		// 	if val, err := bindingsMap[key][0].GetValue("MapId"); err == nil {
+		// 		if val == cache[key] {
+		// 			return
+		// 		}
+		// 	}
+		// }
 		bindingsMap[key] = make([]binding.Struct, listLength)
 		for i := 0; i < listLength; i++ {
 			bindingsMap[key][i] = binding.BindStruct(&listMap[i])
