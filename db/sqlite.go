@@ -44,7 +44,7 @@ func ListMap(pageNo int, pageSize int, where *model.MapInfo, order string) []mod
 	start := (pageNo - 1) * pageSize
 	// end := pageNo * pageSize
 	var mapList []model.MapInfo
-	Db.Debug().Where(&where).Limit(pageSize).Offset(start).Find(&mapList).Order(order)
+	Db.Debug().Where(&where).Limit(pageSize).Offset(start).Order(order).Find(&mapList)
 
 	return mapList
 }

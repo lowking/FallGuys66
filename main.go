@@ -185,11 +185,11 @@ func main() {
 	tabs.OnSelected = func(item *container.TabItem) {
 		switch item.Text {
 		case "未玩列表":
-			go handler.RefreshMapList(driver, window, tabs, 0, &model.MapInfo{State: "0"}, `created asc, mapId`, false)
+			go handler.RefreshMapList(driver, window, tabs, 0, &model.MapInfo{State: "0"}, `created asc, map_id`, false)
 		case "已玩列表":
-			go handler.RefreshMapList(driver, window, tabs, 1, &model.MapInfo{State: "1"}, `created desc, mapId`, false)
+			go handler.RefreshMapList(driver, window, tabs, 1, &model.MapInfo{State: "1"}, `play_time desc, map_id`, false)
 		case "收藏列表":
-			go handler.RefreshMapList(driver, window, tabs, 2, &model.MapInfo{Star: "1"}, `created desc, mapId`, false)
+			go handler.RefreshMapList(driver, window, tabs, 2, &model.MapInfo{Star: "1"}, `created desc, map_id`, false)
 		}
 	}
 	cTabList := container.NewBorder(nil, nil, nil, nil, tabs)
@@ -444,7 +444,7 @@ func logLifecycle(a fyne.App) {
 		log.Println("Lifecycle: Started")
 		// 第一次加载列表
 		if a.Preferences().StringWithFallback(PDefaultLiveHostNo, "") != "" {
-			go handler.RefreshMapList(driver, window, tabs, 0, &model.MapInfo{State: "0"}, `created asc, mapId`, true)
+			go handler.RefreshMapList(driver, window, tabs, 0, &model.MapInfo{State: "0"}, `created asc, map_id`, true)
 		}
 		// go handler.RefreshMapList(driver, window, tabs, 1, `and state="1"`, `order by created desc, mapId`, true)
 		// go handler.RefreshMapList(driver, window, tabs, 2, `and star="1"`, `order by created desc, mapId`, true)
@@ -455,9 +455,9 @@ func logLifecycle(a fyne.App) {
 	a.Lifecycle().SetOnEnteredForeground(func() {
 		log.Println("Lifecycle: Entered Foreground")
 		// 每次聚焦窗口刷新列表
-		go handler.RefreshMapList(driver, window, tabs, 0, &model.MapInfo{State: "0"}, `created asc, mapId`, false)
-		go handler.RefreshMapList(driver, window, tabs, 1, &model.MapInfo{State: "1"}, `created desc, mapId`, false)
-		go handler.RefreshMapList(driver, window, tabs, 2, &model.MapInfo{Star: "1"}, `created desc, mapId`, false)
+		go handler.RefreshMapList(driver, window, tabs, 0, &model.MapInfo{State: "0"}, `created asc, map_id`, false)
+		go handler.RefreshMapList(driver, window, tabs, 1, &model.MapInfo{State: "1"}, `play_time desc, map_id`, false)
+		go handler.RefreshMapList(driver, window, tabs, 2, &model.MapInfo{Star: "1"}, `created desc, map_id`, false)
 	})
 	a.Lifecycle().SetOnExitedForeground(func() {
 		log.Println("Lifecycle: Exited Foreground")

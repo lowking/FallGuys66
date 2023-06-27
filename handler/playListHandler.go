@@ -205,14 +205,29 @@ func RefreshMapList(driver fyne.Driver, window fyne.Window, tabs *container.AppT
 	// 外部传入recreate或者缓存中是true，则重新new
 	tListMap := db.ListMap(1, pageSize, where, order)
 	listLength := len(tListMap)
-	cacheListHeader[key] = listHeader
 	switch idx {
 	case 0:
 		listMap = &listMapPlay
+		if _, ok := cacheListHeader[key]; !ok {
+			cacheListHeader[key] = listHeader
+		}
 	case 1:
 		listMap = &listMapPlayed
+		if _, ok := cacheListHeader[key]; !ok {
+			// tListHeader := headertable.TableOpts{}
+			tListHeader := listHeader
+			tListHeader.ColAttrs = make([]headertable.ColAttr, len(listHeader.ColAttrs))
+			copy(tListHeader.ColAttrs, listHeader.ColAttrs)
+			tListHeader.ColAttrs[8].Name = "PlayTime"
+			tListHeader.ColAttrs[8].Header = "玩游时间"
+			logger.Debugf("%s, %s", listHeader.ColAttrs[8].Name, listHeader.ColAttrs[8].Header)
+			cacheListHeader[key] = tListHeader
+		}
 	case 2:
 		listMap = &listMapStar
+		if _, ok := cacheListHeader[key]; !ok {
+			cacheListHeader[key] = listHeader
+		}
 	}
 	// logger.Debugf("%v", listMap)
 	recreate = recreate || cache[recreateKey] == "true" || listLength < pageSize || cacheHt[key] == nil
