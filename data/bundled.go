@@ -8,6 +8,9 @@ import (
 	"fyne.io/fyne/v2"
 )
 
+//go:embed assets/bg.png
+var bg []byte
+
 //go:embed assets/logo-white.png
 var logoWhite []byte
 
@@ -17,6 +20,10 @@ var logoBlack []byte
 //go:embed assets/font/out.ttf
 var font []byte
 
+var Bg = &fyne.StaticResource{
+	StaticName:    "bg.png",
+	StaticContent: bg,
+}
 var LogoWhite = &fyne.StaticResource{
 	StaticName:    "logo-white.png",
 	StaticContent: logoWhite,

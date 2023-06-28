@@ -27,7 +27,7 @@ var listHeader = headertable.TableOpts{
 				TextStyle: fyne.TextStyle{Bold: true},
 			},
 			DataStyle: headertable.CellStyle{
-				Alignment: fyne.TextAlignCenter,
+				Alignment: fyne.TextAlignLeading,
 			},
 			WidthPercent: 120,
 		},
@@ -149,7 +149,7 @@ var listHeader = headertable.TableOpts{
 				TextStyle: fyne.TextStyle{Bold: true},
 			},
 			DataStyle: headertable.CellStyle{
-				Alignment: fyne.TextAlignLeading,
+				Alignment: fyne.TextAlignTrailing,
 			},
 			WidthPercent: 135,
 			Converter: func(i interface{}) string {

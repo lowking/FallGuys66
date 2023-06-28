@@ -1,4 +1,4 @@
-// Package main provides various examples of Fyne API capabilities.
+//go:generate rsrc -ico data/assets/logo-white.ico -manifest data/assets/main.exe.manifest -o data/assets/main.syso
 package main
 
 import (
@@ -46,9 +46,10 @@ func main() {
 	padding := float32(10)
 	offsetX := float32(-50)
 	offsetY := float32(3)
+	offset := float32(-6)
 	toolbarPaddingTop := padding + 10
 	toolbarPaddingLeft := float32(120)
-	appSize := fyne.NewSize(1020, 870)
+	appSize := fyne.NewSize(1005, 870)
 	application := app.NewWithID("pro.lowking.fallguys66")
 	application.Settings().SetTheme(&data.MyTheme{
 		Regular:    data.FontSmileySansOblique,
@@ -90,6 +91,12 @@ func main() {
 
 	// 需要渲染的元素
 	var elements []fyne.CanvasObject
+	bg := canvas.NewImageFromResource(data.Bg)
+	bgHeight := cLogo.Size().Height + padding*3 + offset + 60
+	logger.Debugf("bg height: %v", bgHeight)
+	bg.Resize(fyne.NewSize(appSize.Width, bgHeight))
+	bg.Move(fyne.NewPos(offset, offset))
+	elements = append(elements, bg)
 	elements = append(elements, cLogo)
 	elements = append(elements, cLogoBlack)
 
@@ -193,7 +200,7 @@ func main() {
 		}
 	}
 	cTabList := container.NewBorder(nil, nil, nil, nil, tabs)
-	cTabList.Move(fyne.NewPos(0, cLogo.Size().Height+padding*3))
+	cTabList.Move(fyne.NewPos(offset, cLogo.Size().Height+padding*3+offset))
 	cTabList.Resize(fyne.NewSize(appSize.Width, appSize.Height-cLogo.Size().Height))
 	elements = append(elements, cTabList)
 
