@@ -372,6 +372,7 @@ func RefreshMapList(driver fyne.Driver, window fyne.Window, tabs *container.AppT
 				xx, yy := getCellPos(fyne.NewPos(0, 220), id.Col, id.Row, tListHeader, 36.1)
 				widget.NewPopUpMenu(tableMenu, window.Canvas()).ShowAtPosition(fyne.NewPos(xx, yy))
 			}
+			cacheHt[key].Data.UnselectAll()
 		}
 		tabs.Items[idx].Content = container.NewMax(cacheHt[key])
 	} else {
