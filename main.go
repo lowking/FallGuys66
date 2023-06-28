@@ -23,8 +23,10 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"image/color"
+	"io"
 	"log"
 	"math/rand"
+	"net/http"
 	"strconv"
 	"strings"
 	"sync"
@@ -377,6 +379,15 @@ func main() {
 	remarkText.Resize(fyne.NewSize(540, 100))
 	remarkText.Move(fyne.NewPos(470, 14))
 	elements = append(elements, remarkText)
+	go func() {
+		for {
+			remark := getRemoteRemark("https://gist.githubusercontent.com/lowking/b45a90d64c15ddde25d28fc11e15a464/raw/remark")
+			if remark != "" {
+				remarkText.ParseMarkdown(remark)
+			}
+			time.Sleep(30 * 60 * time.Second)
+		}
+	}()
 
 	gridLayout := container.NewWithoutLayout(elements...)
 
@@ -385,6 +396,36 @@ func main() {
 	window.CenterOnScreen()
 	window.SetFixedSize(true)
 	window.ShowAndRun()
+}
+
+func getRemoteRemark(url string) string {
+	ret := ""
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return ret
+	}
+	c := http.Client{}
+	response, err := c.Do(req)
+	if err != nil {
+		if strings.Index(url, "https://ghproxy.com/") == 0 {
+			return ret
+		}
+		url = fmt.Sprintf("https://ghproxy.com/%s", url)
+		return getRemoteRemark(url)
+	}
+	if response.StatusCode != 200 {
+		if strings.Index(url, "https://ghproxy.com/") == 0 {
+			return ret
+		}
+		url = fmt.Sprintf("https://ghproxy.com/%s", url)
+		return getRemoteRemark(url)
+	}
+	defer response.Body.Close()
+	body, err := io.ReadAll(response.Body)
+	if err != nil {
+		return ret
+	}
+	return string(body)
 }
 
 func btnConSetDefault(btnCon *widget.Button, liveHostOption *widget.SelectEntry) {

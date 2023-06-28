@@ -220,7 +220,6 @@ func RefreshMapList(driver fyne.Driver, window fyne.Window, tabs *container.AppT
 			copy(tListHeader.ColAttrs, listHeader.ColAttrs)
 			tListHeader.ColAttrs[8].Name = "PlayTime"
 			tListHeader.ColAttrs[8].Header = "玩游时间"
-			logger.Debugf("%s, %s", listHeader.ColAttrs[8].Name, listHeader.ColAttrs[8].Header)
 			cacheListHeader[key] = tListHeader
 		}
 	case 2:
