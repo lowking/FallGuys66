@@ -43,6 +43,8 @@ var version = "1.0.0-beta"
 var driver fyne.Driver
 var window fyne.Window
 
+var enableQueryLoop = true
+
 func main() {
 	logoSize := float32(90)
 	padding := float32(10)
@@ -503,18 +505,35 @@ func logLifecycle(a fyne.App) {
 	a.Lifecycle().SetOnEnteredForeground(func() {
 		log.Println("Lifecycle: Entered Foreground")
 		// 每次聚焦窗口刷新列表
-		switch tabs.SelectedIndex() {
-		case 0:
-			go handler.RefreshMapList(driver, window, tabs, 0, &model.MapInfo{State: "0"}, `created asc, map_id`, false)
-		case 1:
-			go handler.RefreshMapList(driver, window, tabs, 1, &model.MapInfo{State: "1"}, `play_time desc, map_id`, false)
-		case 2:
-			go handler.RefreshMapList(driver, window, tabs, 2, &model.MapInfo{Star: "1"}, `created desc, map_id`, false)
-		}
+		refreshList()
+
+		// 聚焦窗口开启每秒自动刷新
+		enableQueryLoop = true
+		go func() {
+			for {
+				time.Sleep(time.Second)
+				if !enableQueryLoop {
+					break
+				}
+				refreshList()
+			}
+		}()
 	})
 	a.Lifecycle().SetOnExitedForeground(func() {
 		log.Println("Lifecycle: Exited Foreground")
+		enableQueryLoop = false
 	})
+}
+
+func refreshList() {
+	switch tabs.SelectedIndex() {
+	case 0:
+		go handler.RefreshMapList(driver, window, tabs, 0, &model.MapInfo{State: "0"}, `created asc, map_id`, false)
+	case 1:
+		go handler.RefreshMapList(driver, window, tabs, 1, &model.MapInfo{State: "1"}, `play_time desc, map_id`, false)
+	case 2:
+		go handler.RefreshMapList(driver, window, tabs, 2, &model.MapInfo{Star: "1"}, `created desc, map_id`, false)
+	}
 }
 
 func makeTray(a fyne.App) {
