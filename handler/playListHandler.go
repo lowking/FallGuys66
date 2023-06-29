@@ -13,10 +13,11 @@ import (
 	"fyne.io/fyne/v2/data/binding"
 	"fyne.io/fyne/v2/widget"
 	"github.com/wesovilabs/koazee"
+	"golang.org/x/text/width"
 	"time"
 )
 
-var rowLen = 20
+var rowLen = 27
 var listHeader = headertable.TableOpts{
 	RefWidth: "reference width",
 	ColAttrs: []headertable.ColAttr{
@@ -133,11 +134,11 @@ var listHeader = headertable.TableOpts{
 			},
 			DataStyle: headertable.CellStyle{
 				Alignment: fyne.TextAlignLeading,
+				Wrapping:  fyne.TextTruncate,
 			},
 			WidthPercent: 200,
 			Converter: func(i interface{}) string {
 				t := i.(string)
-				t = warpStr(t, rowLen, true)
 				return t
 			},
 		},
@@ -163,24 +164,27 @@ var listHeader = headertable.TableOpts{
 	},
 }
 
-func warpStr(str string, rowLen int, isSingleLine bool) string {
-	runes := []rune(str)
-	if len(runes) > rowLen {
-		times := len(runes) / rowLen
-		ts := ""
-		for i := 1; i <= times; i++ {
-			ts = fmt.Sprintf("%s%s\n", ts, string(runes[:rowLen]))
+func wrapStr(s string, rowLen int, isSingleLine bool) string {
+	w := 0
+	ts := ""
+	for _, r := range s {
+		if w >= rowLen {
 			if isSingleLine {
-				return fmt.Sprintf("%s ...", ts[:len(ts)-1])
-			}
-			runes = runes[rowLen:]
-			if i == times {
-				ts = fmt.Sprintf("%s%s\n", ts, string(runes))
+				return ts + " ..."
+			} else {
+				ts = fmt.Sprintf("%s\n", ts)
+				w = 0
 			}
 		}
-		return ts[:len(ts)-1]
+		switch width.LookupRune(r).Kind() {
+		case width.EastAsianFullwidth, width.EastAsianWide:
+			w += 2
+		case width.EastAsianHalfwidth, width.EastAsianNarrow, width.Neutral, width.EastAsianAmbiguous:
+			w += 1
+		}
+		ts = fmt.Sprintf("%s%s", ts, string(r))
 	}
-	return str
+	return ts
 }
 
 const pageSize = 18
