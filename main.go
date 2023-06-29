@@ -39,7 +39,7 @@ const PLiveHosts = "LiveHosts"
 
 var topWindow fyne.Window
 var tabs *container.AppTabs
-var version = "1.0.0-beta"
+var version = "1.0.0"
 var driver fyne.Driver
 var window fyne.Window
 
