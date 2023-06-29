@@ -1,0 +1,8 @@
+Website = "https://github.com/lowking"
+
+[Details]
+  Icon = "data/assets/logo-white.png"
+  Name = "FallGuys66"
+  ID = "pro.lowking.fallguys66"
+  Version = "1.0.0"
+  Build = 11
