@@ -306,6 +306,9 @@ func RefreshMapList(driver fyne.Driver, window fyne.Window, tabs *container.AppT
 			}
 		})
 		tableMenu := fyne.NewMenu("Actions", firstMenuItem, playMenuItem, starMenuItem, unStarMenuItem)
+		cacheHt[key].Header.OnSelected = func(id widget.TableCellID) {
+			cacheHt[key].Header.UnselectAll()
+		}
 		cacheHt[key].Data.OnSelected = func(id widget.TableCellID) {
 			row := bindingsMap[key][id.Row]
 			colKey := tListHeader.ColAttrs[id.Col].Name
