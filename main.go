@@ -74,18 +74,17 @@ func main() {
 
 	logo := canvas.NewImageFromResource(data.LogoWhite)
 	logo.SetMinSize(fyne.NewSize(logoSize, logoSize))
-	cLogo := container.NewCenter(logo)
-	cLogo.Resize(fyne.NewSize(100, 100))
 	logoBlack := canvas.NewImageFromResource(data.LogoBlack)
 	logoBlack.SetMinSize(fyne.NewSize(logoSize, logoSize))
-	cLogoBlack := container.NewCenter(logoBlack)
-	cLogoBlack.Resize(fyne.NewSize(100, 100))
+
+	cLogo := container.NewCenter(logo)
+	cLogo.Add(logoBlack)
+	cLogo.Resize(fyne.NewSize(100, 100))
 	cLogo.Move(fyne.NewPos(padding, padding+10))
-	cLogoBlack.Move(fyne.NewPos(padding, padding+10))
-	cLogoBlack.Hide()
+	logoBlack.Hide()
 	go func() {
 		for {
-			flashEle(rand.Intn(5), cLogo, cLogoBlack)
+			flashEle(rand.Intn(5), logo, logoBlack)
 			randTime := rand.Intn(900) + 100
 			time.Sleep(time.Duration(randTime) * time.Millisecond)
 		}
@@ -100,7 +99,6 @@ func main() {
 	bg.Move(fyne.NewPos(offset, offset))
 	elements = append(elements, bg)
 	elements = append(elements, cLogo)
-	elements = append(elements, cLogoBlack)
 
 	// 直播间label
 	lLiveHostLabel := canvas.NewText("直播间：", config.AccentColor)
@@ -435,7 +433,7 @@ func btnConSetDefault(btnCon *widget.Button, liveHostOption *widget.SelectEntry)
 	liveHostOption.Show()
 }
 
-func flashEle(times int, elements ...*fyne.Container) {
+func flashEle(times int, elements ...*canvas.Image) {
 	for i := 0; i < times; i++ {
 		time.Sleep(time.Duration(rand.Intn(100)) * time.Millisecond)
 		for _, element := range elements {
@@ -444,6 +442,7 @@ func flashEle(times int, elements ...*fyne.Container) {
 			} else {
 				element.Show()
 			}
+			element.Refresh()
 		}
 	}
 }
@@ -493,10 +492,10 @@ func logLifecycle(a fyne.App) {
 		log.Println("Lifecycle: Started")
 		// 第一次加载列表
 		if a.Preferences().StringWithFallback(PDefaultLiveHostNo, "") != "" {
-			go handler.RefreshMapList(driver, window, tabs, 0, &model.MapInfo{State: "0"}, `created asc, map_id`, true)
+			handler.RefreshMapList(driver, window, tabs, 0, &model.MapInfo{State: "0"}, `created asc, map_id`, true)
 		}
-		// go handler.RefreshMapList(driver, window, tabs, 1, `and state="1"`, `order by created desc, mapId`, true)
-		// go handler.RefreshMapList(driver, window, tabs, 2, `and star="1"`, `order by created desc, mapId`, true)
+		handler.RefreshMapList(driver, window, tabs, 1, &model.MapInfo{State: "1"}, `play_time desc, map_id`, true)
+		handler.RefreshMapList(driver, window, tabs, 2, &model.MapInfo{Star: "1"}, `created desc, map_id`, true)
 	})
 	a.Lifecycle().SetOnStopped(func() {
 		log.Println("Lifecycle: Stopped")
@@ -504,9 +503,14 @@ func logLifecycle(a fyne.App) {
 	a.Lifecycle().SetOnEnteredForeground(func() {
 		log.Println("Lifecycle: Entered Foreground")
 		// 每次聚焦窗口刷新列表
-		go handler.RefreshMapList(driver, window, tabs, 0, &model.MapInfo{State: "0"}, `created asc, map_id`, false)
-		go handler.RefreshMapList(driver, window, tabs, 1, &model.MapInfo{State: "1"}, `play_time desc, map_id`, false)
-		go handler.RefreshMapList(driver, window, tabs, 2, &model.MapInfo{Star: "1"}, `created desc, map_id`, false)
+		switch tabs.SelectedIndex() {
+		case 0:
+			go handler.RefreshMapList(driver, window, tabs, 0, &model.MapInfo{State: "0"}, `created asc, map_id`, false)
+		case 1:
+			go handler.RefreshMapList(driver, window, tabs, 1, &model.MapInfo{State: "1"}, `play_time desc, map_id`, false)
+		case 2:
+			go handler.RefreshMapList(driver, window, tabs, 2, &model.MapInfo{Star: "1"}, `created desc, map_id`, false)
+		}
 	})
 	a.Lifecycle().SetOnExitedForeground(func() {
 		log.Println("Lifecycle: Exited Foreground")

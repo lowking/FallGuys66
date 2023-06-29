@@ -16,6 +16,7 @@ import (
 	"time"
 )
 
+var rowLen = 20
 var listHeader = headertable.TableOpts{
 	RefWidth: "reference width",
 	ColAttrs: []headertable.ColAttr{
@@ -95,11 +96,11 @@ var listHeader = headertable.TableOpts{
 			WidthPercent: 40,
 			Converter: func(i interface{}) string {
 				t := i.(string)
-				if t == "0" {
-					return ""
+				if t == "1" {
+					return "🎮"
 				} else {
 					// return "---"
-					return "🎮"
+					return ""
 				}
 			},
 		},
@@ -116,10 +117,10 @@ var listHeader = headertable.TableOpts{
 			WidthPercent: 40,
 			Converter: func(i interface{}) string {
 				t := i.(string)
-				if t == "0" {
-					return ""
-				} else {
+				if t == "1" {
 					return "★"
+				} else {
+					return ""
 				}
 			},
 		},
@@ -136,9 +137,8 @@ var listHeader = headertable.TableOpts{
 			WidthPercent: 200,
 			Converter: func(i interface{}) string {
 				t := i.(string)
-				rowLen := 20
-				ret := warpStr(t, rowLen, true)
-				return ret
+				t = warpStr(t, rowLen, true)
+				return t
 			},
 		},
 		{
@@ -154,6 +154,9 @@ var listHeader = headertable.TableOpts{
 			WidthPercent: 135,
 			Converter: func(i interface{}) string {
 				t := i.(time.Time)
+				if t.IsZero() {
+					return ""
+				}
 				return t.Format("2006-01-02 15:04:05")
 			},
 		},
@@ -202,7 +205,6 @@ func RefreshMapList(driver fyne.Driver, window fyne.Window, tabs *container.AppT
 	// 查询数据库获取最新列表
 	key := fmt.Sprintf("map%d", idx)
 	recreateKey := fmt.Sprintf("map%dRecreate", idx)
-	// 外部传入recreate或者缓存中是true，则重新new
 	tListMap := db.ListMap(1, pageSize, where, order)
 	listLength := len(tListMap)
 	switch idx {
@@ -214,7 +216,6 @@ func RefreshMapList(driver fyne.Driver, window fyne.Window, tabs *container.AppT
 	case 1:
 		listMap = &listMapPlayed
 		if _, ok := cacheListHeader[key]; !ok {
-			// tListHeader := headertable.TableOpts{}
 			tListHeader := listHeader
 			tListHeader.ColAttrs = make([]headertable.ColAttr, len(listHeader.ColAttrs))
 			copy(tListHeader.ColAttrs, listHeader.ColAttrs)
@@ -229,15 +230,20 @@ func RefreshMapList(driver fyne.Driver, window fyne.Window, tabs *container.AppT
 		}
 	}
 	// logger.Debugf("%v", listMap)
-	recreate = recreate || cache[recreateKey] == "true" || listLength < pageSize || cacheHt[key] == nil
+	recreate = recreate || cache[recreateKey] == "true" || cacheHt[key] == nil
+	logger.Debugf("██%d-%v", idx, recreate)
 	tListHeader := cacheListHeader[key]
 	if listLength > 0 {
 		cache[recreateKey] = "false"
 		if cacheHt[key] == nil {
 			cacheHt[key] = &headertable.HeaderTable{}
 		}
-		for i := 0; i < listLength; i++ {
-			(*listMap)[i] = tListMap[i]
+		for i := 0; i < pageSize; i++ {
+			if i >= listLength {
+				(*listMap)[i] = model.MapInfo{}
+			} else {
+				(*listMap)[i] = tListMap[i]
+			}
 		}
 		if !recreate {
 			logger.Debugf("current index: %d, cacheHt: %v", idx, cacheHt)
@@ -248,13 +254,12 @@ func RefreshMapList(driver fyne.Driver, window fyne.Window, tabs *container.AppT
 			logger.Infof("refresh finish, total: %v", len(tListMap))
 			return
 		}
-		bindingsMap[key] = make([]binding.Struct, listLength)
-		for i := 0; i < listLength; i++ {
+		bindingsMap[key] = make([]binding.Struct, pageSize)
+		for i := 0; i < pageSize; i++ {
 			bindingsMap[key][i] = binding.BindStruct(&((*listMap)[i]))
 		}
 		tListHeader.Bindings = bindingsMap[key]
 		cacheHt[key] = headertable.NewHeaderTable(&tListHeader)
-		cache[key] = (*listMap)[0].MapId
 		firstItemAction := func() {
 			if s, err := bsCellTempString.Get(); err == nil {
 				window.Clipboard().SetContent(s)
@@ -307,6 +312,10 @@ func RefreshMapList(driver fyne.Driver, window fyne.Window, tabs *container.AppT
 			if value, err := row.GetValue(colKey); err == nil {
 				// 每次点击记录地图Id
 				if mid, err := row.GetValue("MapId"); err == nil {
+					if mid == "" {
+						cacheHt[key].Data.UnselectAll()
+						return
+					}
 					_ = bsMapIdTempString.Set(mid.(string))
 				}
 				// 处理单元格字符
