@@ -12,6 +12,7 @@ import (
 	"FallGuys66/live/douyu/client"
 	"FallGuys66/live/douyu/lib/logger"
 	"FallGuys66/utils"
+	"FallGuys66/widgets/searchentry"
 	"fmt"
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
@@ -39,20 +40,16 @@ const PLiveHosts = "LiveHosts"
 
 var topWindow fyne.Window
 var tabs *container.AppTabs
-var version = "1.0.0"
+var version = "1.1.0"
 var driver fyne.Driver
 var window fyne.Window
 
 var enableQueryLoop = true
 
 func main() {
-	logoSize := float32(90)
-	padding := float32(10)
 	offsetX := float32(-50)
 	offsetY := float32(3)
 	offset := float32(-6)
-	toolbarPaddingTop := padding + 10
-	toolbarPaddingLeft := float32(120)
 	appSize := fyne.NewSize(1005, 870)
 	application := app.NewWithID("pro.lowking.fallguys66")
 	application.Settings().SetTheme(&data.MyTheme{
@@ -75,14 +72,14 @@ func main() {
 	window.SetMaster()
 
 	logo := canvas.NewImageFromResource(data.LogoWhite)
-	logo.SetMinSize(fyne.NewSize(logoSize, logoSize))
+	logo.SetMinSize(fyne.NewSize(config.LogoSize, config.LogoSize))
 	logoBlack := canvas.NewImageFromResource(data.LogoBlack)
-	logoBlack.SetMinSize(fyne.NewSize(logoSize, logoSize))
+	logoBlack.SetMinSize(fyne.NewSize(config.LogoSize, config.LogoSize))
 
 	cLogo := container.NewCenter(logo)
 	cLogo.Add(logoBlack)
 	cLogo.Resize(fyne.NewSize(100, 100))
-	cLogo.Move(fyne.NewPos(padding, padding+10))
+	cLogo.Move(fyne.NewPos(config.Padding, config.Padding+10))
 	logoBlack.Hide()
 	go func() {
 		for {
@@ -95,7 +92,7 @@ func main() {
 	// 需要渲染的元素
 	var elements []fyne.CanvasObject
 	bg := canvas.NewImageFromResource(data.Bg)
-	bgHeight := cLogo.Size().Height + padding*3 + offset + 60
+	bgHeight := cLogo.Size().Height + config.Padding*3 + offset + 60
 	logger.Debugf("bg height: %v", bgHeight)
 	bg.Resize(fyne.NewSize(appSize.Width, bgHeight))
 	bg.Move(fyne.NewPos(offset, offset))
@@ -107,8 +104,8 @@ func main() {
 	lLiveHostShadowLabel := canvas.NewText("直播间：", config.ShadowColor)
 	lLiveHostLabel.TextSize = 35
 	lLiveHostShadowLabel.TextSize = 35
-	lLiveHostLabel.Move(fyne.NewPos(toolbarPaddingLeft, toolbarPaddingTop))
-	lLiveHostShadowLabel.Move(fyne.NewPos(toolbarPaddingLeft+1, toolbarPaddingTop+1))
+	lLiveHostLabel.Move(fyne.NewPos(config.ToolbarPaddingLeft, config.ToolbarPaddingTop))
+	lLiveHostShadowLabel.Move(fyne.NewPos(config.ToolbarPaddingLeft+1, config.ToolbarPaddingTop+1))
 	elements = append(elements, lLiveHostShadowLabel)
 	elements = append(elements, lLiveHostLabel)
 
@@ -122,7 +119,7 @@ func main() {
 		A: 255,
 	})
 	tLiveHostNo.TextSize = 35
-	tLiveHostNo.Move(fyne.NewPos(cLogo.Size().Width+toolbarPaddingLeft+optionSize.Width+padding*2+offsetX, toolbarPaddingTop+offsetY-3))
+	tLiveHostNo.Move(fyne.NewPos(cLogo.Size().Width+config.ToolbarPaddingLeft+optionSize.Width+config.Padding*2+offsetX, config.ToolbarPaddingTop+offsetY-3))
 	elements = append(elements, tLiveHostNo)
 	liveHosts := []string{
 		"156277",
@@ -144,7 +141,7 @@ func main() {
 	liveHostOption.SetText(defaultLiveHostNo)
 	cLiveHostOption := container.NewMax(liveHostOption)
 	cLiveHostOption.Resize(optionSize)
-	cLiveHostOption.Move(fyne.NewPos(cLogo.Size().Width+toolbarPaddingLeft+optionSize.Width+padding*2+offsetX, toolbarPaddingTop+offsetY))
+	cLiveHostOption.Move(fyne.NewPos(cLogo.Size().Width+config.ToolbarPaddingLeft+optionSize.Width+config.Padding*2+offsetX, config.ToolbarPaddingTop+offsetY))
 	elements = append(elements, cLiveHostOption)
 
 	// 初始化copyright
@@ -171,51 +168,29 @@ func main() {
 	elements = append(elements, lCopyrightL)
 	elements = append(elements, lCopyrightR)
 
-	// 给列表行添加背景
-	// rowHeight := 39
-	// for i := 0; i < int(appSize.Height/float32(rowHeight)); i+=2 {
-	// 	tableRowLine := canvas.NewRectangle(color.RGBA{
-	// 		R: 234,
-	// 		G: 234,
-	// 		B: 234,
-	// 		A: 255,
-	// 	})
-	// 	tableRowLine.Resize(fyne.NewSize(appSize.Width-10, float32(rowHeight)))
-	// 	tableRowLine.Move(fyne.NewPos(0, cLogo.Size().Height+float32(padding*3)+114+float32((rowHeight)*i)-float32(i)*1.4))
-	// 	elements = append(elements, tableRowLine)
-	// }
-
 	// 初始化tab列表
 	tabs = container.NewAppTabs(
 		container.NewTabItem("未玩列表", utils.MakeEmptyList(config.AccentColor)),
 		container.NewTabItem("已玩列表", utils.MakeEmptyList(config.AccentColor)),
 		container.NewTabItem("收藏列表", utils.MakeEmptyList(config.AccentColor)),
+		container.NewTabItem("搜索结果", utils.MakeEmptyList(config.AccentColor)),
 	)
 	tabs.OnSelected = func(item *container.TabItem) {
 		switch item.Text {
 		case "未玩列表":
-			go handler.RefreshMapList(driver, window, tabs, 0, &model.MapInfo{State: "0"}, `created asc, map_id`, false)
+			go handler.RefreshMapList(driver, window, tabs, 0, nil, &model.MapInfo{State: "0"}, `created asc, map_id`, false)
 		case "已玩列表":
-			go handler.RefreshMapList(driver, window, tabs, 1, &model.MapInfo{State: "1"}, `play_time desc, map_id`, false)
+			go handler.RefreshMapList(driver, window, tabs, 1, nil, &model.MapInfo{State: "1"}, `play_time desc, map_id`, false)
 		case "收藏列表":
-			go handler.RefreshMapList(driver, window, tabs, 2, &model.MapInfo{Star: "1"}, `created desc, map_id`, false)
+			go handler.RefreshMapList(driver, window, tabs, 2, nil, &model.MapInfo{Star: "1"}, `created desc, map_id`, false)
+		case "搜索结果":
+			go handler.RefreshMapList(driver, window, tabs, 3, nil, &model.MapInfo{}, `created desc, map_id`, false)
 		}
 	}
 	cTabList := container.NewBorder(nil, nil, nil, nil, tabs)
-	cTabList.Move(fyne.NewPos(offset, cLogo.Size().Height+padding*3+offset))
+	cTabList.Move(fyne.NewPos(offset, cLogo.Size().Height+config.Padding*3+offset))
 	cTabList.Resize(fyne.NewSize(appSize.Width, appSize.Height-cLogo.Size().Height))
 	elements = append(elements, cTabList)
-
-	// 直线分割表头
-	// tableHeaderLine := canvas.NewRectangle(color.RGBA{
-	// 	R: 204,
-	// 	G: 204,
-	// 	B: 204,
-	// 	A: 255,
-	// })
-	// tableHeaderLine.Resize(fyne.NewSize(appSize.Width, 5))
-	// tableHeaderLine.Move(fyne.NewPos(0, cLogo.Size().Height+float32(padding*3)+75))
-	// elements = append(elements, tableHeaderLine)
 
 	// 连接直播间按钮
 	var webSocketClient client.DyBarrageWebSocketClient
@@ -248,7 +223,7 @@ func main() {
 			connectSuc := false
 			time.Sleep(1 * time.Second)
 			if liveHost != "dev" {
-				// todo 连接弹幕
+				// 连接弹幕
 				logger.Infof("connecting douyu: %s", liveHost)
 				spiderConfig := &DMconfig.DMconfig{
 					Rid:            liveHost,
@@ -327,24 +302,8 @@ func main() {
 					liveHostOption.Refresh()
 					application.Preferences().SetString(PLiveHosts, strings.Join(liveHosts, "|"))
 				}
-				// application.Preferences().SetString(PLiveHosts, "")
 				// 保存默认值
 				application.Preferences().SetString(PDefaultLiveHostNo, liveHost)
-
-				// 改成每次聚焦刷新，无需轮训刷新
-				// 定时查询获取最新地图
-				// go func() {
-				// 	for {
-				// 		time.Sleep(2 * time.Second)
-				// 		if btnCon.Importance != widget.HighImportance {
-				// 			log.Printf("exit query loop")
-				// 			return
-				// 		}
-				// 		go handler.RefreshMapList(tabs, 0, `and state="0"`, `order by created asc, mapId`)
-				// 		go handler.RefreshMapList(tabs, 1, `and state="1"`, `order by created desc, mapId`)
-				// 		go handler.RefreshMapList(tabs, 2, `and star="1"`, `order by created desc, mapId`)
-				// 	}
-				// }()
 			} else {
 				// 连接失败
 				btnCon.Importance = widget.DangerImportance
@@ -363,7 +322,7 @@ func main() {
 	btnCon.Importance = widget.MediumImportance
 	cBtnCon := container.NewMax(btnCon)
 	cBtnCon.Resize(fyne.NewSize(65, 36))
-	cBtnCon.Move(fyne.NewPos(cLogo.Size().Width+toolbarPaddingLeft+70+padding*2+offsetX, toolbarPaddingTop+offsetY))
+	cBtnCon.Move(fyne.NewPos(cLogo.Size().Width+config.ToolbarPaddingLeft+65+config.Padding*2+offsetX, config.ToolbarPaddingTop+offsetY))
 	elements = append(elements, cBtnCon)
 
 	// 版本信息
@@ -372,6 +331,10 @@ func main() {
 	versionText.Alignment = fyne.TextAlignTrailing
 	versionText.Move(fyne.NewPos(appSize.Width-10, 0))
 	elements = append(elements, versionText)
+
+	// 搜索相关
+	searchEles := generateSearchContainer()
+	elements = append(elements, searchEles...)
 
 	// 说明，从远程获取
 	remarkText := widget.NewRichTextFromMarkdown(config.RemarkText)
@@ -396,6 +359,27 @@ func main() {
 	window.CenterOnScreen()
 	window.SetFixedSize(true)
 	window.ShowAndRun()
+}
+
+func generateSearchContainer() []fyne.CanvasObject {
+	height := float32(37)
+	y := float32(71)
+	keyWordEntry := searchentry.NewSearchEntry("多个关键词用空格隔开")
+	keyWordEntry.Resize(fyne.NewSize(250, height))
+	keyWordEntry.Move(fyne.NewPos(config.ToolbarPaddingLeft, y))
+	keyWordEntry.OnSubmitted = func(_ string) {
+		time.Sleep(100 * time.Millisecond)
+		tabs.SelectIndex(3)
+		go handler.RefreshMapList(driver, window, tabs, 3, &keyWordEntry.Text, &model.MapInfo{}, `created desc, map_id`, false)
+	}
+	searchBtn := widget.NewButtonWithIcon("搜索", theme.SearchIcon(), func() {
+		tabs.SelectIndex(3)
+		go handler.RefreshMapList(driver, window, tabs, 3, &keyWordEntry.Text, &model.MapInfo{}, `created desc, map_id`, false)
+	})
+	searchBtn.Resize(fyne.NewSize(90, height))
+	searchBtn.Move(fyne.NewPos(config.ToolbarPaddingLeft+keyWordEntry.Size().Width+config.Padding, y))
+
+	return []fyne.CanvasObject{keyWordEntry, searchBtn}
 }
 
 func getRemoteRemark(url string) string {
@@ -494,16 +478,19 @@ func logLifecycle(a fyne.App) {
 		log.Println("Lifecycle: Started")
 		// 第一次加载列表
 		if a.Preferences().StringWithFallback(PDefaultLiveHostNo, "") != "" {
-			handler.RefreshMapList(driver, window, tabs, 0, &model.MapInfo{State: "0"}, `created asc, map_id`, true)
+			handler.RefreshMapList(driver, window, tabs, 0, nil, &model.MapInfo{State: "0"}, `created asc, map_id`, true)
 		}
-		handler.RefreshMapList(driver, window, tabs, 1, &model.MapInfo{State: "1"}, `play_time desc, map_id`, true)
-		handler.RefreshMapList(driver, window, tabs, 2, &model.MapInfo{Star: "1"}, `created desc, map_id`, true)
+		handler.RefreshMapList(driver, window, tabs, 1, nil, &model.MapInfo{State: "1"}, `play_time desc, map_id`, true)
+		handler.RefreshMapList(driver, window, tabs, 2, nil, &model.MapInfo{Star: "1"}, `created desc, map_id`, true)
 	})
 	a.Lifecycle().SetOnStopped(func() {
 		log.Println("Lifecycle: Stopped")
 	})
 	a.Lifecycle().SetOnEnteredForeground(func() {
 		log.Println("Lifecycle: Entered Foreground")
+		if tabs.SelectedIndex() >= 3 {
+			return
+		}
 		// 每次聚焦窗口刷新列表
 		refreshList()
 
@@ -528,11 +515,11 @@ func logLifecycle(a fyne.App) {
 func refreshList() {
 	switch tabs.SelectedIndex() {
 	case 0:
-		go handler.RefreshMapList(driver, window, tabs, 0, &model.MapInfo{State: "0"}, `created asc, map_id`, false)
+		go handler.RefreshMapList(driver, window, tabs, 0, nil, &model.MapInfo{State: "0"}, `created asc, map_id`, false)
 	case 1:
-		go handler.RefreshMapList(driver, window, tabs, 1, &model.MapInfo{State: "1"}, `play_time desc, map_id`, false)
+		go handler.RefreshMapList(driver, window, tabs, 1, nil, &model.MapInfo{State: "1"}, `play_time desc, map_id`, false)
 	case 2:
-		go handler.RefreshMapList(driver, window, tabs, 2, &model.MapInfo{Star: "1"}, `created desc, map_id`, false)
+		go handler.RefreshMapList(driver, window, tabs, 2, nil, &model.MapInfo{Star: "1"}, `created desc, map_id`, false)
 	}
 }
 

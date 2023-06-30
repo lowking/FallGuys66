@@ -14,6 +14,7 @@ import (
 	"fyne.io/fyne/v2/widget"
 	"github.com/wesovilabs/koazee"
 	"golang.org/x/text/width"
+	"strings"
 	"time"
 )
 
@@ -100,7 +101,6 @@ var listHeader = headertable.TableOpts{
 				if t == "1" {
 					return "🎮"
 				} else {
-					// return "---"
 					return ""
 				}
 			},
@@ -203,13 +203,42 @@ var bsMapIdTempString = binding.BindString(&mapIdTempString)
 var listMapPlay = [pageSize]model.MapInfo{}
 var listMapPlayed = [pageSize]model.MapInfo{}
 var listMapStar = [pageSize]model.MapInfo{}
+var searchResult = [pageSize]model.MapInfo{}
 var listMap *[pageSize]model.MapInfo
+var whereString = "map_id like ? or nn like ? or uid like ? or rid like ? or txt like ?"
 
-func RefreshMapList(driver fyne.Driver, window fyne.Window, tabs *container.AppTabs, idx int, where *model.MapInfo, order string, recreate bool) {
+func RefreshMapList(driver fyne.Driver, window fyne.Window, tabs *container.AppTabs, idx int, keyWord *string, where *model.MapInfo, order string, recreate bool) {
 	// 查询数据库获取最新列表
+	var tListMap []model.MapInfo
+	switch idx {
+	case 0, 1, 2:
+		tListMap = db.ListMap(1, pageSize, where, order)
+	case 3:
+		if keyWord == nil {
+			return
+		}
+		*keyWord = strings.TrimSpace(*keyWord)
+		if *keyWord != "" {
+			rWhere := ""
+			for _, s := range strings.Split(*keyWord, " ") {
+				rWhere = fmt.Sprintf(
+					`%s or %s`,
+					strings.ReplaceAll(whereString, "?", fmt.Sprintf(`"%%%s%%"`, s)),
+					rWhere,
+				)
+			}
+			if rWhere != "" {
+				rWhere = rWhere[:len(rWhere)-3]
+			}
+			tListMap = db.SearchMap(1, pageSize, rWhere, order)
+		}
+	}
+	refreshData(driver, window, tabs, idx, keyWord, where, order, recreate, tListMap)
+}
+
+func refreshData(driver fyne.Driver, window fyne.Window, tabs *container.AppTabs, idx int, keyWord *string, where *model.MapInfo, order string, recreate bool, tListMap []model.MapInfo) {
 	key := fmt.Sprintf("map%d", idx)
 	recreateKey := fmt.Sprintf("map%dRecreate", idx)
-	tListMap := db.ListMap(1, pageSize, where, order)
 	listLength := len(tListMap)
 	switch idx {
 	case 0:
@@ -229,6 +258,11 @@ func RefreshMapList(driver fyne.Driver, window fyne.Window, tabs *container.AppT
 		}
 	case 2:
 		listMap = &listMapStar
+		if _, ok := cacheListHeader[key]; !ok {
+			cacheListHeader[key] = listHeader
+		}
+	case 3:
+		listMap = &searchResult
 		if _, ok := cacheListHeader[key]; !ok {
 			cacheListHeader[key] = listHeader
 		}
@@ -279,7 +313,7 @@ func RefreshMapList(driver fyne.Driver, window fyne.Window, tabs *container.AppT
 						model.MapInfo{MapId: s, State: "1", PlayTime: time.Now()},
 						[]string{"State", "PlayTime"},
 						&model.MapInfo{State: "0"})
-					RefreshMapList(driver, window, tabs, idx, where, order, false)
+					RefreshMapList(driver, window, tabs, idx, keyWord, where, order, false)
 				}()
 			}
 		})
@@ -292,7 +326,7 @@ func RefreshMapList(driver fyne.Driver, window fyne.Window, tabs *container.AppT
 						model.MapInfo{MapId: s, Star: "1"},
 						[]string{"Star"},
 						&model.MapInfo{Star: "0"})
-					RefreshMapList(driver, window, tabs, idx, where, order, false)
+					RefreshMapList(driver, window, tabs, idx, keyWord, where, order, false)
 				}()
 			}
 		})
@@ -305,7 +339,7 @@ func RefreshMapList(driver fyne.Driver, window fyne.Window, tabs *container.AppT
 						model.MapInfo{MapId: s, Star: "0"},
 						[]string{"Star"},
 						&model.MapInfo{Star: "1"})
-					RefreshMapList(driver, window, tabs, idx, where, order, false)
+					RefreshMapList(driver, window, tabs, idx, keyWord, where, order, false)
 				}()
 			}
 		})

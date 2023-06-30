@@ -2,6 +2,10 @@ package config
 
 import "image/color"
 
+var LogoSize = float32(90)
+var Padding = float32(10)
+var ToolbarPaddingTop = Padding + 10
+var ToolbarPaddingLeft = float32(120)
 var RemarkText = `### PS, 💖 Power with love.`
 
 var AccentColor = color.RGBA{
