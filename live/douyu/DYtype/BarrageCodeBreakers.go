@@ -95,6 +95,11 @@ func (c CodeBreakershandler) GetChatMessages(msgByte []byte) []Response {
 
 // __parseMsg:根据符号分割字符串组成消息
 func (c CodeBreakershandler) __parseMsg(rawMsg string) Response {
+	defer func() {
+		if err := recover(); err != nil {
+			logger.Errorf("%v rawMsg：%s", err, rawMsg)
+		}
+	}()
 	res := make(Response)
 	attrs := strings.Split(rawMsg, "/")
 	attrs = attrs[0:]
@@ -104,7 +109,11 @@ func (c CodeBreakershandler) __parseMsg(rawMsg string) Response {
 			attr = strings.Replace(attr, "@A", "@", 1)
 			couple := strings.Split(attr, "@=")
 
-			res[couple[0]] = couple[1]
+			if len(couple) < 2 {
+				res[couple[0]] = ""
+			} else {
+				res[couple[0]] = couple[1]
+			}
 		}
 	}
 	return res
