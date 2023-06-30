@@ -221,6 +221,9 @@ func RefreshMapList(driver fyne.Driver, window fyne.Window, tabs *container.AppT
 		if *keyWord != "" {
 			rWhere := ""
 			for _, s := range strings.Split(*keyWord, " ") {
+				if s == "" {
+					continue
+				}
 				rWhere = fmt.Sprintf(
 					`%s or %s`,
 					strings.ReplaceAll(whereString, "?", fmt.Sprintf(`"%%%s%%"`, s)),

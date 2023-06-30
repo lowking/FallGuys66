@@ -40,7 +40,7 @@ const PLiveHosts = "LiveHosts"
 
 var topWindow fyne.Window
 var tabs *container.AppTabs
-var version = "1.1.0"
+var version = "1.1.1"
 var driver fyne.Driver
 var window fyne.Window
 
@@ -365,6 +365,7 @@ func generateSearchContainer() []fyne.CanvasObject {
 	height := float32(37)
 	y := float32(71)
 	keyWordEntry := searchentry.NewSearchEntry("多个关键词用空格隔开")
+	keyWordEntry.Wrapping = fyne.TextTruncate
 	keyWordEntry.Resize(fyne.NewSize(250, height))
 	keyWordEntry.Move(fyne.NewPos(config.ToolbarPaddingLeft, y))
 	keyWordEntry.OnSubmitted = func(_ string) {
