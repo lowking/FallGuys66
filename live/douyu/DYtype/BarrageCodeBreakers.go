@@ -88,13 +88,22 @@ func (c CodeBreakershandler) GetChatMessages(msgByte []byte) []Response {
 	var messages []Response
 	for _, msg := range decodeMsg {
 		res := c.__parseMsg(msg)
-		messages = append(messages, res)
+		if res != nil {
+			messages = append(messages, res)
+		} else {
+			logger.Debugf("parseMsg error: index out of range, msgByte: %x, msg: %s", msgByte, res)
+		}
 	}
 	return messages
 }
 
 // __parseMsg:根据符号分割字符串组成消息
 func (c CodeBreakershandler) __parseMsg(rawMsg string) Response {
+	defer func() {
+		if err := recover(); err != nil {
+			logger.Errorf("%v rawMsg：%s", err, rawMsg)
+		}
+	}()
 	res := make(Response)
 	attrs := strings.Split(rawMsg, "/")
 	attrs = attrs[0:]
@@ -104,6 +113,9 @@ func (c CodeBreakershandler) __parseMsg(rawMsg string) Response {
 			attr = strings.Replace(attr, "@A", "@", 1)
 			couple := strings.Split(attr, "@=")
 
+			if len(couple) < 2 {
+				return nil
+			}
 			res[couple[0]] = couple[1]
 		}
 	}
