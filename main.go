@@ -235,7 +235,7 @@ func main() {
 					LoginJoinGroup: "type@=joingroup/rid@=%s/gid@=-9999/",
 					Url:            "wss://danmuproxy.douyu.com:8506/",
 				}
-				out := make(chan client.Item)
+				out := make(chan client.Item, 30)
 				webSocketClient = client.DyBarrageWebSocketClient{
 					ItemIn: out,
 					Config: spiderConfig,
@@ -433,7 +433,8 @@ func flashEle(times int, elements ...*canvas.Image) {
 			} else {
 				element.Show()
 			}
-			element.Refresh()
+			// 不要一直刷新，内存会暴涨🤣
+			// element.Refresh()
 		}
 	}
 }
