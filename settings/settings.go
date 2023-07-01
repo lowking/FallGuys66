@@ -2,6 +2,7 @@ package settings
 
 import (
 	"FallGuys66/config"
+	"FallGuys66/data"
 	"fmt"
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -34,8 +35,8 @@ func NewSettings() *Settings {
 
 func (s *Settings) Init() *container.AppTabs {
 	settingTabs := container.NewAppTabs(
-		container.NewTabItemWithIcon("通用设置", theme.SettingsIcon(), s.GenCommonSettings()),
-		container.NewTabItemWithIcon("糖豆人设置", theme.MenuIcon(), s.GenFgSettings()),
+		container.NewTabItemWithIcon("通用", theme.SettingsIcon(), s.GenCommonSettings()),
+		container.NewTabItemWithIcon("　糖豆人　", data.FgLogo, s.GenFgSettings()),
 	)
 	settingTabs.SetTabLocation(container.TabLocationLeading)
 

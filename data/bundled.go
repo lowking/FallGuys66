@@ -17,6 +17,9 @@ var logoWhite []byte
 //go:embed assets/logo-black.png
 var logoBlack []byte
 
+//go:embed assets/fg.png
+var fgLogo []byte
+
 //go:embed assets/font/out.ttf
 var font []byte
 
@@ -35,4 +38,8 @@ var LogoBlack = &fyne.StaticResource{
 var FontSmileySansOblique = &fyne.StaticResource{
 	StaticName:    "SmileySans-Oblique.ttf",
 	StaticContent: font,
+}
+var FgLogo = &fyne.StaticResource{
+	StaticName:    "fg.png",
+	StaticContent: fgLogo,
 }
