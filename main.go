@@ -11,6 +11,7 @@ import (
 	"FallGuys66/live/douyu/DYtype"
 	"FallGuys66/live/douyu/client"
 	"FallGuys66/live/douyu/lib/logger"
+	"FallGuys66/settings"
 	"FallGuys66/utils"
 	"FallGuys66/widgets/searchentry"
 	"fmt"
@@ -40,6 +41,7 @@ const PLiveHosts = "LiveHosts"
 
 var topWindow fyne.Window
 var tabs *container.AppTabs
+var setting *settings.Settings
 var version = "1.1.2"
 var driver fyne.Driver
 var window fyne.Window
@@ -64,7 +66,7 @@ func main() {
 	// 托盘图标
 	makeTray(application)
 	logLifecycle(application)
-	window = application.NewWindow("糖豆人直播助手：大周定制版")
+	window = application.NewWindow(config.AppName)
 	topWindow = window
 
 	// 菜单
@@ -169,11 +171,13 @@ func main() {
 	elements = append(elements, lCopyrightR)
 
 	// 初始化tab列表
+	setting = settings.NewSettings()
 	tabs = container.NewAppTabs(
 		container.NewTabItem("未玩列表", utils.MakeEmptyList(config.AccentColor)),
 		container.NewTabItem("已玩列表", utils.MakeEmptyList(config.AccentColor)),
 		container.NewTabItem("收藏列表", utils.MakeEmptyList(config.AccentColor)),
 		container.NewTabItem("搜索结果", utils.MakeEmptyList(config.AccentColor)),
+		container.NewTabItem("设置", setting.Init()),
 	)
 	tabs.OnSelected = func(item *container.TabItem) {
 		switch item.Text {
@@ -483,6 +487,11 @@ func logLifecycle(a fyne.App) {
 		}
 		handler.RefreshMapList(driver, window, tabs, 1, nil, &model.MapInfo{State: "1"}, `play_time desc, map_id`, true)
 		handler.RefreshMapList(driver, window, tabs, 2, nil, &model.MapInfo{Star: "1"}, `created desc, map_id`, true)
+
+		tabs.SelectIndex(4)
+		if setting.AutoGetFgPid {
+			setting.BtnGetFgPid.OnTapped()
+		}
 	})
 	a.Lifecycle().SetOnStopped(func() {
 		log.Println("Lifecycle: Stopped")

@@ -2,6 +2,7 @@ package config
 
 import "image/color"
 
+var AppName = "糖豆人直播助手：大周定制版"
 var LogoSize = float32(90)
 var Padding = float32(10)
 var ToolbarPaddingTop = Padding + 10
