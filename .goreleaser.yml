@@ -1,0 +1,41 @@
+builds:
+  - main: "./"
+    id: "64bit"
+    env:
+      - CGO_ENABLED=1
+      - CC=x86_64-w64-mingw32-gcc
+      - CXX=x86_64-w64-mingw32-g++
+    goos:
+      - windows
+    goarch:
+      - amd64
+
+    ldflags:
+      - -X version=v{{.Version}}
+      - -X FallGuys66.version=v{{.Version}}
+      - -X FallGuys66/version=v{{.Version}}
+      - -s -w -X github.com/lowking/FallGuys66/version=v{{.Version}}
+      - -H windowsgui
+    binary: FallGuys66
+
+archives:
+  - name_template: "FallGuys66_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
+
+release:
+  draft: true
+  # Repo in which the release will be created.
+  # Default is extracted from the origin remote URL or empty if its private hosted.
+  github:
+    owner: lowking
+    name: FallGuys66
+
+  # What to do with the release notes in case there the release already exists.
+  #
+  # Valid options are:
+  # - `keep-existing`: keep the existing notes
+  # - `append`: append the current release notes to the existing notes
+  # - `prepend`: prepend the current release notes to the existing notes
+  # - `replace`: replace existing notes
+  #
+  # Default is `keep-existing`.
+  mode: append
