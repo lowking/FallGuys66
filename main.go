@@ -489,7 +489,6 @@ func logLifecycle(a fyne.App) {
 		handler.RefreshMapList(driver, window, tabs, 1, nil, &model.MapInfo{State: "1"}, `play_time desc, map_id`, true)
 		handler.RefreshMapList(driver, window, tabs, 2, nil, &model.MapInfo{Star: "1"}, `created desc, map_id`, true)
 
-		tabs.SelectIndex(4)
 		if setting.AutoGetFgPid {
 			setting.BtnGetFgPid.OnTapped()
 		}

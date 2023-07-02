@@ -10,7 +10,6 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/go-vgo/robotgo"
-	_ "github.com/go-vgo/robotgo"
 	"time"
 )
 
@@ -45,7 +44,7 @@ func (s *Settings) Init() *container.AppTabs {
 
 func (s *Settings) GenCommonSettings() *fyne.Container {
 	app := fyne.CurrentApp()
-	s.AutoGetFgPid = app.Preferences().BoolWithFallback(PAutoGetFgPid, true)
+	s.AutoGetFgPid = app.Preferences().BoolWithFallback(PAutoGetFgPid, false)
 	y1st := lineHeight*0 + config.Padding
 	cbAutoGetFgPid := widget.NewCheckWithData("启动时，自动获取糖豆人进程ID", binding.BindBool(&s.AutoGetFgPid))
 	cbAutoGetFgPid.OnChanged = func(b bool) {
