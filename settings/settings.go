@@ -113,6 +113,7 @@ func (s *Settings) genGetFgPidSettingsRow() {
 	s.fgSettingItems = append(s.fgSettingItems, fgLabel)
 
 	fgPidEntry := searchentry.NewSearchEntry("请填写糖豆人进程ID")
+	fgPidEntry.Wrapping = fyne.TextTruncate
 	fgPidEntry.Resize(fyne.NewSize(150, 35))
 	fgPidLabel := widget.NewLabel("-")
 	fgPidLabel.Resize(fyne.NewSize(200, lineHeight))
