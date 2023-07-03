@@ -26,7 +26,7 @@ func In(strArray []string, target string) bool {
 }
 
 func FillMapId(id string, settings *settings.Settings) {
-	if settings.FgPid == "" || settings.PosSelectShow == nil || settings.PosEnterMapId == nil || settings.PosCodeEntry == nil || settings.PosConfirmBtn == nil || *settings.PosSelectShow == "" || *settings.PosEnterMapId == "" || *settings.PosCodeEntry == "" || *settings.PosConfirmBtn == "" {
+	if !settings.AutoFillMapId || settings.FgPid == "" || settings.PosSelectShow == nil || settings.PosEnterMapId == nil || settings.PosCodeEntry == nil || settings.PosConfirmBtn == nil || *settings.PosSelectShow == "" || *settings.PosEnterMapId == "" || *settings.PosCodeEntry == "" || *settings.PosConfirmBtn == "" {
 		return
 	}
 	pid, err := strconv.ParseInt(settings.FgPid, 10, 32)
