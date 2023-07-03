@@ -5,6 +5,7 @@ import (
 	"FallGuys66/db"
 	"FallGuys66/db/model"
 	"FallGuys66/live/douyu/lib/logger"
+	"FallGuys66/settings"
 	"FallGuys66/utils"
 	"FallGuys66/widgets/headertable"
 	"fmt"
@@ -18,7 +19,6 @@ import (
 	"time"
 )
 
-var rowLen = 27
 var listHeader = headertable.TableOpts{
 	RefWidth: "reference width",
 	ColAttrs: []headertable.ColAttr{
@@ -207,7 +207,7 @@ var searchResult = [pageSize]model.MapInfo{}
 var listMap *[pageSize]model.MapInfo
 var whereString = "map_id like ? or nn like ? or uid like ? or rid like ? or txt like ?"
 
-func RefreshMapList(driver fyne.Driver, window fyne.Window, tabs *container.AppTabs, idx int, keyWord *string, where *model.MapInfo, order string, recreate bool) {
+func RefreshMapList(settings *settings.Settings, window fyne.Window, tabs *container.AppTabs, idx int, keyWord *string, where *model.MapInfo, order string, recreate bool) {
 	// 查询数据库获取最新列表
 	var tListMap []model.MapInfo
 	switch idx {
@@ -236,10 +236,10 @@ func RefreshMapList(driver fyne.Driver, window fyne.Window, tabs *container.AppT
 			tListMap = db.SearchMap(1, pageSize, rWhere, order)
 		}
 	}
-	refreshData(driver, window, tabs, idx, keyWord, where, order, recreate, tListMap)
+	refreshData(settings, window, tabs, idx, keyWord, where, order, recreate, tListMap)
 }
 
-func refreshData(driver fyne.Driver, window fyne.Window, tabs *container.AppTabs, idx int, keyWord *string, where *model.MapInfo, order string, recreate bool, tListMap []model.MapInfo) {
+func refreshData(settings *settings.Settings, window fyne.Window, tabs *container.AppTabs, idx int, keyWord *string, where *model.MapInfo, order string, recreate bool, tListMap []model.MapInfo) {
 	key := fmt.Sprintf("map%d", idx)
 	recreateKey := fmt.Sprintf("map%dRecreate", idx)
 	listLength := len(tListMap)
@@ -310,39 +310,39 @@ func refreshData(driver fyne.Driver, window fyne.Window, tabs *container.AppTabs
 		playMenuItem := fyne.NewMenuItem("游玩", func() {
 			if s, err := bsMapIdTempString.Get(); err == nil {
 				window.Clipboard().SetContent(s)
-				go utils.FillMapId(s)
+				go utils.FillMapId(s, settings)
 				go func() {
 					db.UpdateMap(
 						model.MapInfo{MapId: s, State: "1", PlayTime: time.Now()},
 						[]string{"State", "PlayTime"},
 						&model.MapInfo{State: "0"})
-					RefreshMapList(driver, window, tabs, idx, keyWord, where, order, false)
+					RefreshMapList(settings, window, tabs, idx, keyWord, where, order, false)
 				}()
 			}
 		})
 		starMenuItem := fyne.NewMenuItem("收藏", func() {
 			if s, err := bsMapIdTempString.Get(); err == nil {
 				window.Clipboard().SetContent(s)
-				go utils.FillMapId(s)
+				go utils.FillMapId(s, settings)
 				go func() {
 					db.UpdateMap(
 						model.MapInfo{MapId: s, Star: "1"},
 						[]string{"Star"},
 						&model.MapInfo{Star: "0"})
-					RefreshMapList(driver, window, tabs, idx, keyWord, where, order, false)
+					RefreshMapList(settings, window, tabs, idx, keyWord, where, order, false)
 				}()
 			}
 		})
 		unStarMenuItem := fyne.NewMenuItem("取消收藏", func() {
 			if s, err := bsMapIdTempString.Get(); err == nil {
 				window.Clipboard().SetContent(s)
-				go utils.FillMapId(s)
+				go utils.FillMapId(s, settings)
 				go func() {
 					db.UpdateMap(
 						model.MapInfo{MapId: s, Star: "0"},
 						[]string{"Star"},
 						&model.MapInfo{Star: "1"})
-					RefreshMapList(driver, window, tabs, idx, keyWord, where, order, false)
+					RefreshMapList(settings, window, tabs, idx, keyWord, where, order, false)
 				}()
 			}
 		})

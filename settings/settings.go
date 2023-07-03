@@ -26,6 +26,7 @@ var (
 	PSelectShowPos = "PSelectShowPos"
 	PEnterMapIdPos = "PEnterMapIdPos"
 	PCodeEntryPos  = "PCodeEntryPos"
+	PConfirmBtnPos = "PConfirmBtnPos"
 	FgName         = "FallGuys_client"
 	fgLabelWidth   = float32(100)
 )
@@ -40,6 +41,7 @@ type Settings struct {
 	PosSelectShow *string
 	PosEnterMapId *string
 	PosCodeEntry  *string
+	PosConfirmBtn *string
 
 	commonSettingItems []fyne.CanvasObject
 	fgSettingItems     []fyne.CanvasObject
@@ -110,10 +112,13 @@ func (s *Settings) genGetFgPidSettingsRow() {
 	fgLabel.Move(fyne.NewPos(config.Padding, y))
 	s.fgSettingItems = append(s.fgSettingItems, fgLabel)
 
-	fgPidEntry := searchentry.NewSearchEntry("请填写糖豆人进程ID，回车保存")
-	fgPidEntry.Resize(fyne.NewSize(200, 35))
+	fgPidEntry := searchentry.NewSearchEntry("请填写糖豆人进程ID")
+	fgPidEntry.Resize(fyne.NewSize(150, 35))
 	fgPidLabel := widget.NewLabel("-")
 	fgPidLabel.Resize(fyne.NewSize(200, lineHeight))
+	fgPidEntry.OnCursorChanged = func() {
+		s.FgPid = fgPidEntry.Text
+	}
 	fgPidEntry.OnSubmitted = func(str string) {
 		s.FgPid = str
 	}
@@ -225,7 +230,18 @@ func (s *Settings) genFgAutoClickSettingsRow() {
 	codeEntryPosEntry.Resize(fyne.NewSize(160, 35))
 	codeEntryPosEntry.Move(fyne.NewPos(config.Padding*3+fgLabel.Size().Width+selectShowPosEntry.Size().Width+enterMapIdPosEntry.Size().Width, y))
 	s.fgSettingItems = append(s.fgSettingItems, codeEntryPosEntry)
-	logger.Debugf("Binding Select Show: %s EnterMapId: %s CodeEntry: %s", pSelectShowPos, pEnterMapIdPos, pCodeEntryPos)
+
+	// 确认按钮点击坐标文本框
+	pConfirmBtnPos := app.Preferences().StringWithFallback(PConfirmBtnPos, "")
+	confirmBtnPosEntry := searchentry.NewSearchEntry("确认按钮的坐标: x,y")
+	confirmBtnPosEntry.Wrapping = fyne.TextTruncate
+	s.PosConfirmBtn = &pConfirmBtnPos
+	confirmBtnPosEntry.Bind(binding.BindString(s.PosConfirmBtn))
+	confirmBtnPosEntry.Validator = nil
+	confirmBtnPosEntry.Resize(fyne.NewSize(160, 35))
+	confirmBtnPosEntry.Move(fyne.NewPos(config.Padding*4+fgLabel.Size().Width+selectShowPosEntry.Size().Width+enterMapIdPosEntry.Size().Width+codeEntryPosEntry.Size().Width, y))
+	s.fgSettingItems = append(s.fgSettingItems, confirmBtnPosEntry)
+	logger.Debugf("Binding Select Show: %s EnterMapId: %s CodeEntry: %s ConfirmBtn: %s", pSelectShowPos, pEnterMapIdPos, pCodeEntryPos, pConfirmBtnPos)
 
 	// 测试点击按钮
 	var clickedEntry *searchentry.SearchEntry
@@ -267,8 +283,7 @@ func (s *Settings) genFgAutoClickSettingsRow() {
 		}()
 	})
 	btnTestPos.Resize(fyne.NewSize(100, 35))
-	btnTestPos.Move(fyne.NewPos(fgLabel.Size().Width+config.Padding, y+3))
-	btnTestPos.Move(fyne.NewPos(config.Padding*4+fgLabel.Size().Width+selectShowPosEntry.Size().Width+enterMapIdPosEntry.Size().Width+codeEntryPosEntry.Size().Width, y))
+	btnTestPos.Move(fyne.NewPos(config.Padding*5+fgLabel.Size().Width+selectShowPosEntry.Size().Width+enterMapIdPosEntry.Size().Width+codeEntryPosEntry.Size().Width+confirmBtnPosEntry.Size().Width, y))
 	s.fgSettingItems = append(s.fgSettingItems, btnTestPos)
 
 	selectShowPosEntry.OnTapped = func(event *fyne.PointEvent) {
@@ -280,6 +295,9 @@ func (s *Settings) genFgAutoClickSettingsRow() {
 	codeEntryPosEntry.OnTapped = func(event *fyne.PointEvent) {
 		clickedEntry = codeEntryPosEntry
 	}
+	confirmBtnPosEntry.OnTapped = func(event *fyne.PointEvent) {
+		clickedEntry = confirmBtnPosEntry
+	}
 	selectShowPosEntry.OnCursorChanged = func() {
 		fyne.CurrentApp().Preferences().SetString(PSelectShowPos, selectShowPosEntry.Text)
 	}
@@ -288,5 +306,8 @@ func (s *Settings) genFgAutoClickSettingsRow() {
 	}
 	codeEntryPosEntry.OnCursorChanged = func() {
 		fyne.CurrentApp().Preferences().SetString(PCodeEntryPos, codeEntryPosEntry.Text)
+	}
+	confirmBtnPosEntry.OnCursorChanged = func() {
+		fyne.CurrentApp().Preferences().SetString(PConfirmBtnPos, confirmBtnPosEntry.Text)
 	}
 }
