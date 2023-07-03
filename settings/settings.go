@@ -3,26 +3,43 @@ package settings
 import (
 	"FallGuys66/config"
 	"FallGuys66/data"
+	"FallGuys66/live/douyu/lib/logger"
+	"FallGuys66/widgets/searchentry"
 	"fmt"
 	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/data/binding"
+	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/go-vgo/robotgo"
+	"strconv"
+	"strings"
 	"time"
 )
 
 var (
-	lineHeight    = float32(50)
-	PAutoGetFgPid = "PAutoGetFgPid"
-	FgName        = "Sublime"
+	lineHeight     = float32(50)
+	PAutoGetFgPid  = "PAutoGetFgPid"
+	PAutoFillMapId = "PAutoFillMapId"
+	PSelectShowPos = "PSelectShowPos"
+	PEnterMapIdPos = "PEnterMapIdPos"
+	PCodeEntryPos  = "PCodeEntryPos"
+	FgName         = "FallGuys_client"
+	fgLabelWidth   = float32(100)
 )
 
 type Settings struct {
-	FgPid        string
-	BtnGetFgPid  *widget.Button
-	AutoGetFgPid bool
+	FgPid         string
+	BtnGetFgPid   *widget.Button
+	AutoGetFgPid  bool
+	AutoFillMapId bool
+	Window        *fyne.Window
+
+	PosSelectShow *string
+	PosEnterMapId *string
+	PosCodeEntry  *string
 
 	commonSettingItems []fyne.CanvasObject
 	fgSettingItems     []fyne.CanvasObject
@@ -32,7 +49,8 @@ func NewSettings() *Settings {
 	return &Settings{}
 }
 
-func (s *Settings) Init() *container.AppTabs {
+func (s *Settings) Init(window *fyne.Window) *container.AppTabs {
+	s.Window = window
 	settingTabs := container.NewAppTabs(
 		container.NewTabItemWithIcon("通用", theme.SettingsIcon(), s.GenCommonSettings()),
 		container.NewTabItemWithIcon("　糖豆人　", data.FgLogo, s.GenFgSettings()),
@@ -60,20 +78,52 @@ func (s *Settings) GenCommonSettings() *fyne.Container {
 }
 
 func (s *Settings) GenFgSettings() *fyne.Container {
-	// 糖豆人窗口捕获
+	// 糖豆人进程获取设置
+	s.genGetFgPidSettingsRow()
+	s.genFgAutoClickSettingsRow()
+
+	return container.NewWithoutLayout(s.fgSettingItems...)
+}
+
+func (s *Settings) genGetFgPidSettingsRow() {
+	y := lineHeight*0 + config.Padding
+	app := fyne.CurrentApp()
+	s.AutoFillMapId = app.Preferences().BoolWithFallback(PAutoFillMapId, false)
+	cbAutoFillMapId := widget.NewCheckWithData(`点击"游玩"时，自动一键唤醒游戏，并填写地图代码`, binding.BindBool(&s.AutoFillMapId))
+	cbAutoFillMapId.OnChanged = func(b bool) {
+		s.AutoFillMapId = b
+		app.Preferences().SetBool(PAutoFillMapId, s.AutoFillMapId)
+	}
+	cCbAutoFillMapId := container.NewHBox(cbAutoFillMapId)
+	cCbAutoFillMapId.Move(fyne.NewPos(config.Padding, y))
+	s.fgSettingItems = append(s.fgSettingItems, cCbAutoFillMapId)
+
+	y = lineHeight*1 + config.Padding
+	infoLabel := canvas.NewText(`‼️ 如果自动获取不可用，请打开任务管理器查看并粘贴糖豆人进程ID（Pid）`, config.AccentColor)
+	infoLabel.Move(fyne.NewPos(config.Padding, y))
+	s.fgSettingItems = append(s.fgSettingItems, infoLabel)
+
+	y = lineHeight*1.5 + config.Padding
 	fgLabel := widget.NewLabel("糖豆人进程ID：")
-	y1st := lineHeight*0 + config.Padding
-	fgLabel.Resize(fyne.NewSize(100, lineHeight))
-	fgLabel.Move(fyne.NewPos(config.Padding, y1st))
+	fgLabel.Alignment = fyne.TextAlignTrailing
+	fgLabel.Resize(fyne.NewSize(fgLabelWidth, lineHeight))
+	fgLabel.Move(fyne.NewPos(config.Padding, y))
 	s.fgSettingItems = append(s.fgSettingItems, fgLabel)
 
-	app := fyne.CurrentApp()
+	fgPidEntry := searchentry.NewSearchEntry("请填写糖豆人进程ID，回车保存")
+	fgPidEntry.Resize(fyne.NewSize(200, 35))
 	fgPidLabel := widget.NewLabel("-")
 	fgPidLabel.Resize(fyne.NewSize(200, lineHeight))
+	fgPidEntry.OnSubmitted = func(str string) {
+		s.FgPid = str
+	}
 	s.fgSettingItems = append(s.fgSettingItems, fgPidLabel)
+	s.fgSettingItems = append(s.fgSettingItems, fgPidEntry)
 
 	btnGetFgPid := widget.NewButtonWithIcon("自动获取", theme.SettingsIcon(), func() {
 		fgPidLabel.SetText("")
+		fgPidEntry.Hide()
+		fgPidLabel.Show()
 		state := false
 		go func() {
 			for {
@@ -93,10 +143,11 @@ func (s *Settings) GenFgSettings() *fyne.Container {
 			if err == nil && len(ids) > 0 {
 				pid := fmt.Sprintf("%d", ids[0])
 				fgPidLabel.SetText(pid)
+				fgPidEntry.SetText(pid)
 				s.FgPid = pid
 				app.SendNotification(&fyne.Notification{
 					Title:   config.AppName,
-					Content: "已获取到糖豆人进程ID\n开启一键填充地图ID",
+					Content: "已获取到糖豆人进程ID",
 				})
 				state = true
 				// if pid, err := strconv.ParseInt(s.FgPid, 10, 32); err == nil {
@@ -108,20 +159,134 @@ func (s *Settings) GenFgSettings() *fyne.Container {
 				// 	}
 				// }
 			} else {
-				fgPidLabel.SetText("未获取到糖豆人进程ID，无法自动填写地图ID")
+				fgPidLabel.SetText("未获取到糖豆人进程ID")
 				app.SendNotification(&fyne.Notification{
 					Title:   config.AppName,
-					Content: "未获取到糖豆人进程ID\n无法自动填写地图ID",
+					Content: "未获取到糖豆人进程ID",
 				})
 				state = true
 			}
+			fgPidLabel.Hide()
+			fgPidEntry.Show()
 		}()
 	})
 	btnGetFgPid.Resize(fyne.NewSize(100, lineHeight/2))
-	btnGetFgPid.Move(fyne.NewPos(fgLabel.Size().Width+config.Padding, y1st+3))
+	btnGetFgPid.Move(fyne.NewPos(fgLabel.Size().Width+config.Padding, y+3))
 	s.BtnGetFgPid = btnGetFgPid
-	fgPidLabel.Move(fyne.NewPos(fgLabel.Size().Width+btnGetFgPid.Size().Width+config.Padding*2, y1st))
+	fgPidLabel.Move(fyne.NewPos(fgLabel.Size().Width+btnGetFgPid.Size().Width+config.Padding*2, y))
+	fgPidEntry.Move(fyne.NewPos(fgLabel.Size().Width+btnGetFgPid.Size().Width+config.Padding*2, y))
+	fgPidLabel.Hide()
 	s.fgSettingItems = append(s.fgSettingItems, btnGetFgPid)
+}
 
-	return container.NewWithoutLayout(s.fgSettingItems...)
+func (s *Settings) genFgAutoClickSettingsRow() {
+	app := fyne.CurrentApp()
+	y := lineHeight*2.5 + config.Padding
+	infoLabel := canvas.NewText(`‼️ 按照"123,123"格式在下方填写对应坐标（截图软件可以定位坐标），然后点击"测试点击"按钮调整坐标，保证能够正确点击相应按钮即可`, config.AccentColor)
+	infoLabel.Move(fyne.NewPos(config.Padding, y))
+	s.fgSettingItems = append(s.fgSettingItems, infoLabel)
+
+	y = lineHeight*3 + config.Padding
+	fgLabel := widget.NewLabel("自动点击：")
+	fgLabel.Alignment = fyne.TextAlignTrailing
+	fgLabel.Resize(fyne.NewSize(fgLabelWidth, lineHeight))
+	fgLabel.Move(fyne.NewPos(config.Padding, y))
+	s.fgSettingItems = append(s.fgSettingItems, fgLabel)
+
+	// 选择节目按钮点击坐标文本框
+	pSelectShowPos := app.Preferences().StringWithFallback(PSelectShowPos, "")
+	selectShowPosEntry := searchentry.NewSearchEntry("选择节目按钮的坐标: x,y")
+	selectShowPosEntry.Wrapping = fyne.TextTruncate
+	s.PosSelectShow = &pSelectShowPos
+	selectShowPosEntry.Bind(binding.BindString(s.PosSelectShow))
+	selectShowPosEntry.Validator = nil
+	selectShowPosEntry.Resize(fyne.NewSize(160, 35))
+	selectShowPosEntry.Move(fyne.NewPos(config.Padding+fgLabel.Size().Width, y))
+	s.fgSettingItems = append(s.fgSettingItems, selectShowPosEntry)
+
+	// 输入代码按钮点击坐标文本框
+	pEnterMapIdPos := app.Preferences().StringWithFallback(PEnterMapIdPos, "")
+	enterMapIdPosEntry := searchentry.NewSearchEntry("输入代码按钮的坐标: x,y")
+	enterMapIdPosEntry.Wrapping = fyne.TextTruncate
+	s.PosEnterMapId = &pEnterMapIdPos
+	enterMapIdPosEntry.Bind(binding.BindString(s.PosEnterMapId))
+	enterMapIdPosEntry.Validator = nil
+	enterMapIdPosEntry.Resize(fyne.NewSize(160, 35))
+	enterMapIdPosEntry.Move(fyne.NewPos(config.Padding*2+fgLabel.Size().Width+selectShowPosEntry.Size().Width, y))
+	s.fgSettingItems = append(s.fgSettingItems, enterMapIdPosEntry)
+
+	// 代码输入框点击坐标文本框
+	pCodeEntryPos := app.Preferences().StringWithFallback(PCodeEntryPos, "")
+	codeEntryPosEntry := searchentry.NewSearchEntry("代码输入框的坐标: x,y")
+	codeEntryPosEntry.Wrapping = fyne.TextTruncate
+	s.PosCodeEntry = &pCodeEntryPos
+	codeEntryPosEntry.Bind(binding.BindString(s.PosCodeEntry))
+	codeEntryPosEntry.Validator = nil
+	codeEntryPosEntry.Resize(fyne.NewSize(160, 35))
+	codeEntryPosEntry.Move(fyne.NewPos(config.Padding*3+fgLabel.Size().Width+selectShowPosEntry.Size().Width+enterMapIdPosEntry.Size().Width, y))
+	s.fgSettingItems = append(s.fgSettingItems, codeEntryPosEntry)
+	logger.Debugf("Binding Select Show: %s EnterMapId: %s CodeEntry: %s", pSelectShowPos, pEnterMapIdPos, pCodeEntryPos)
+
+	// 测试点击按钮
+	var clickedEntry *searchentry.SearchEntry
+	btnTestPos := widget.NewButtonWithIcon("测试点击", theme.ContentAddIcon(), func() {
+		logger.Debugf("Select Show: %s EnterMapId: %s CodeEntry: %s", s.PosSelectShow, s.PosEnterMapId, s.PosCodeEntry)
+		if clickedEntry == nil {
+			dialog.ShowInformation("提示", "请点击一个坐标文本框再试", *s.Window)
+			return
+		}
+		pos := strings.Split(clickedEntry.Text, ",")
+		if len(pos) != 2 {
+			dialog.ShowInformation("提示", "坐标格式错误，格式：123,123", *s.Window)
+			return
+		}
+		var xx int
+		var yy int
+		var err error
+		xx, err = strconv.Atoi(pos[0])
+		if err != nil {
+			dialog.ShowInformation("提示", "坐标格式错误，格式：123,123", *s.Window)
+			return
+		}
+		yy, err = strconv.Atoi(pos[1])
+		if err != nil {
+			dialog.ShowInformation("提示", "坐标格式错误，格式：123,123", *s.Window)
+			return
+		}
+		go func() {
+			if s.FgPid != "" {
+				if pid, err := strconv.ParseInt(s.FgPid, 10, 32); err == nil {
+					if err = robotgo.ActivePID(int32(pid)); err != nil {
+						dialog.ShowInformation("提示", "唤醒游戏失败，请重新获取游戏进程", *s.Window)
+					}
+				}
+			}
+			robotgo.Move(xx, yy)
+			time.Sleep(500 * time.Millisecond)
+			robotgo.Click("left")
+		}()
+	})
+	btnTestPos.Resize(fyne.NewSize(100, 35))
+	btnTestPos.Move(fyne.NewPos(fgLabel.Size().Width+config.Padding, y+3))
+	btnTestPos.Move(fyne.NewPos(config.Padding*4+fgLabel.Size().Width+selectShowPosEntry.Size().Width+enterMapIdPosEntry.Size().Width+codeEntryPosEntry.Size().Width, y))
+	s.fgSettingItems = append(s.fgSettingItems, btnTestPos)
+
+	selectShowPosEntry.OnTapped = func(event *fyne.PointEvent) {
+		clickedEntry = selectShowPosEntry
+	}
+	enterMapIdPosEntry.OnTapped = func(event *fyne.PointEvent) {
+		clickedEntry = enterMapIdPosEntry
+	}
+	codeEntryPosEntry.OnTapped = func(event *fyne.PointEvent) {
+		clickedEntry = codeEntryPosEntry
+	}
+	selectShowPosEntry.OnCursorChanged = func() {
+		fyne.CurrentApp().Preferences().SetString(PSelectShowPos, selectShowPosEntry.Text)
+	}
+	enterMapIdPosEntry.OnCursorChanged = func() {
+		fyne.CurrentApp().Preferences().SetString(PEnterMapIdPos, enterMapIdPosEntry.Text)
+	}
+	codeEntryPosEntry.OnCursorChanged = func() {
+		fyne.CurrentApp().Preferences().SetString(PCodeEntryPos, codeEntryPosEntry.Text)
+	}
 }

@@ -177,7 +177,7 @@ func main() {
 		container.NewTabItem("已玩列表", utils.MakeEmptyList(config.AccentColor)),
 		container.NewTabItem("收藏列表", utils.MakeEmptyList(config.AccentColor)),
 		container.NewTabItem("搜索结果", utils.MakeEmptyList(config.AccentColor)),
-		container.NewTabItem("设置", setting.Init()),
+		container.NewTabItem("设置", setting.Init(&window)),
 	)
 	tabs.OnSelected = func(item *container.TabItem) {
 		switch item.Text {
@@ -492,6 +492,7 @@ func logLifecycle(a fyne.App) {
 		if setting.AutoGetFgPid {
 			setting.BtnGetFgPid.OnTapped()
 		}
+		tabs.SelectIndex(4)
 	})
 	a.Lifecycle().SetOnStopped(func() {
 		log.Println("Lifecycle: Stopped")
