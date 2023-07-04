@@ -15,6 +15,7 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/data/binding"
 	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/driver/desktop"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/go-vgo/robotgo"
@@ -35,8 +36,10 @@ var (
 	PConfirmBtnPos              = "PConfirmBtnPos"
 	PHotKeyPlayNext             = "PHotKeyPlayNext"
 	PHotKeyPlayNextOnSelectShow = "PHotKeyPlayNextOnSelectShow"
+	PScFocusSearch              = "PScFocusSearch"
 	FgName                      = "FallGuys_client"
 	fgLabelWidth                = float32(100)
+	commonShortcutLabelWidth    = float32(150)
 )
 
 type Settings struct {
@@ -51,9 +54,13 @@ type Settings struct {
 	PosCodeEntry  *string
 	PosConfirmBtn *string
 
+	OtherEntry map[string]*searchentry.SearchEntry
+
 	commonSettingItems []fyne.CanvasObject
 	fgSettingItems     []fyne.CanvasObject
 	hotKey             map[string]*hotkey.Hotkey
+	altName            string
+	isNotify           *bool
 }
 
 func NewSettings() *Settings {
@@ -62,12 +69,21 @@ func NewSettings() *Settings {
 
 func (s *Settings) Init(window *fyne.Window) *container.AppTabs {
 	s.Window = window
+	b := false
+	s.isNotify = &b
+	switch runtime.GOOS {
+	case "darwin":
+		s.altName = "option"
+	default:
+		s.altName = "alt"
+	}
 	settingTabs := container.NewAppTabs(
 		container.NewTabItemWithIcon("通用", theme.SettingsIcon(), s.GenCommonSettings()),
 		container.NewTabItemWithIcon("　糖豆人　", data.FgLogo, s.GenFgSettings()),
 	)
 	settingTabs.SetTabLocation(container.TabLocationLeading)
 	s.hotKey = make(map[string]*hotkey.Hotkey)
+	s.OtherEntry = make(map[string]*searchentry.SearchEntry)
 
 	return settingTabs
 }
@@ -75,7 +91,7 @@ func (s *Settings) Init(window *fyne.Window) *container.AppTabs {
 func (s *Settings) GenCommonSettings() *fyne.Container {
 	app := fyne.CurrentApp()
 	s.AutoGetFgPid = app.Preferences().BoolWithFallback(PAutoGetFgPid, false)
-	y1st := lineHeight*0 + config.Padding
+	y := lineHeight*0 + config.Padding
 	cbAutoGetFgPid := widget.NewCheckWithData("启动时，自动获取糖豆人进程ID", binding.BindBool(&s.AutoGetFgPid))
 	cbAutoGetFgPid.OnChanged = func(b bool) {
 		s.AutoGetFgPid = b
@@ -83,8 +99,60 @@ func (s *Settings) GenCommonSettings() *fyne.Container {
 	}
 	cbAutoGetFgPid.SetChecked(s.AutoGetFgPid)
 	cCbAutoGetFgPid := container.NewHBox(cbAutoGetFgPid)
-	cCbAutoGetFgPid.Move(fyne.NewPos(config.Padding, y1st))
+	cCbAutoGetFgPid.Move(fyne.NewPos(config.Padding, y))
 	s.commonSettingItems = append(s.commonSettingItems, cCbAutoGetFgPid)
+
+	y = lineHeight*1 + config.Padding
+	shortcutLabel := widget.NewLabel("快捷键")
+	shortcutLabel.Alignment = fyne.TextAlignLeading
+	shortcutLabel.Resize(fyne.NewSize(commonShortcutLabelWidth, lineHeight))
+	shortcutLabel.Move(fyne.NewPos(config.Padding, y))
+	s.commonSettingItems = append(s.commonSettingItems, shortcutLabel)
+
+	// 定位搜索文本框
+	y = lineHeight*1.5 + config.Padding
+	scFocusSearchLabel := widget.NewLabel("定位搜索文本框：")
+	scFocusSearchLabel.Alignment = fyne.TextAlignTrailing
+	scFocusSearchLabel.Resize(fyne.NewSize(commonShortcutLabelWidth, lineHeight))
+	scFocusSearchLabel.Move(fyne.NewPos(config.Padding, y))
+	s.commonSettingItems = append(s.commonSettingItems, scFocusSearchLabel)
+	scFocusSearchEntry := searchentry.NewSearchEntry("例：ctrl+f，回车保存")
+	scFocusSearchEntry.Wrapping = fyne.TextTruncate
+	scFocusSearchEntry.Resize(fyne.NewSize(170, 35))
+	scFocusSearchEntry.Move(fyne.NewPos(config.Padding+scFocusSearchLabel.Size().Width, y))
+	scFocusSearchEntry.OnSubmitted = func(str string) {
+		if str == "" {
+			return
+		}
+		keys := strings.Split(str, "+")
+		if len(keys) != 2 {
+			if *s.isNotify {
+				dialog.ShowInformation("提示", "快捷键必须是2个按键", *s.Window)
+			}
+			return
+		}
+		scFocusSearch := &desktop.CustomShortcut{
+			KeyName:  s.getKeyForFyne(keys[1]),
+			Modifier: s.getModifier(keys[0]),
+		}
+		(*s.Window).Canvas().RemoveShortcut(scFocusSearch)
+		(*s.Window).Canvas().AddShortcut(scFocusSearch, func(shortcut fyne.Shortcut) {
+			// TODO: 2023-07-04 支持选中文本
+		})
+		if *s.isNotify {
+			app.Preferences().SetString(PScFocusSearch, strings.TrimSpace(str))
+			dialog.ShowInformation("提示", fmt.Sprintf("快捷键[%s]设置完成", str), *s.Window)
+		}
+	}
+	scFocusSearchStr := app.Preferences().StringWithFallback(PScFocusSearch, "")
+	scFocusSearchEntry.OnSubmitted(scFocusSearchStr)
+	scFocusSearchEntry.SetText(scFocusSearchStr)
+	s.commonSettingItems = append(s.commonSettingItems, scFocusSearchEntry)
+
+	infoLabel := widget.NewLabel("目前不支持，等待后续实现")
+	infoLabel.Resize(fyne.NewSize(commonShortcutLabelWidth, lineHeight))
+	infoLabel.Move(fyne.NewPos(config.Padding+scFocusSearchLabel.Size().Width+scFocusSearchEntry.Size().Width, y))
+	s.commonSettingItems = append(s.commonSettingItems, infoLabel)
 
 	return container.NewWithoutLayout(s.commonSettingItems...)
 }
@@ -347,15 +415,9 @@ func (s *Settings) genFgAutoClickSettingsRow() {
 	// 快捷键设置
 	// 根据给定参数生成连线
 	objects := []fyne.CanvasObject{selectShowPosEntry, enterMapIdPosEntry, codeEntryPosEntry, confirmBtnPosEntry}
-	b := false
-	var isNotify *bool
-	isNotify = &b
 	playNext := func(str string) {
 		keys := strings.Split(str, "+")
-		if len(keys) < 3 {
-			if *isNotify {
-				dialog.ShowInformation("提示", "快捷键必须至少3个按键", *s.Window)
-			}
+		if !s.shortcutChecker(keys, s.isNotify, 3) {
 			return
 		}
 		go func() {
@@ -374,25 +436,15 @@ func (s *Settings) genFgAutoClickSettingsRow() {
 						cbm.CallBackFunc("fg FillMapIdForPlayNext", maps[0].MapId, s)
 					}
 				}()
-			}, isNotify, PHotKeyPlayNext)
+			}, s.isNotify, PHotKeyPlayNext)
 		}()
 	}
 	playNextHotKeyStr := app.Preferences().StringWithFallback(PHotKeyPlayNext, "")
 	playNext(playNextHotKeyStr)
-	altName := "alt"
-	switch runtime.GOOS {
-	case "darwin":
-		altName = "option"
-	default:
-		altName = "alt"
-	}
-	s.genEntryWithLink(objects[1:], fmt.Sprintf("例：ctrl+%s+n，回车保存", altName), 170, 35, playNext, 2, playNextHotKeyStr)
+	s.genEntryWithLink(objects[1:], fmt.Sprintf("例：ctrl+%s+n，回车保存", s.altName), 170, 35, playNext, 2, playNextHotKeyStr)
 	playNextOnSelectShow := func(str string) {
 		keys := strings.Split(str, "+")
-		if len(keys) < 3 {
-			if *isNotify {
-				dialog.ShowInformation("提示", "快捷键必须至少3个按键", *s.Window)
-			}
+		if !s.shortcutChecker(keys, s.isNotify, 3) {
 			return
 		}
 		go func() {
@@ -411,17 +463,27 @@ func (s *Settings) genFgAutoClickSettingsRow() {
 						cbm.CallBackFunc("fg FillMapIdForPlayNextOnSelectShow", maps[0].MapId, s)
 					}
 				}()
-			}, isNotify, PHotKeyPlayNextOnSelectShow)
+			}, s.isNotify, PHotKeyPlayNextOnSelectShow)
 		}()
 	}
 	playNextOnSelectShowHotKeyStr := app.Preferences().StringWithFallback(PHotKeyPlayNextOnSelectShow, "")
 	playNextOnSelectShow(playNextOnSelectShowHotKeyStr)
 	// playNext(playNextOnSelectShowHotKeyStr)
-	s.genEntryWithLink(objects, fmt.Sprintf("例：ctrl+%s+p，回车保存", altName), 170, 35, playNextOnSelectShow, 1, playNextOnSelectShowHotKeyStr)
+	s.genEntryWithLink(objects, fmt.Sprintf("例：ctrl+%s+p，回车保存", s.altName), 170, 35, playNextOnSelectShow, 1, playNextOnSelectShowHotKeyStr)
 	go func() {
 		time.Sleep(2 * time.Second)
-		*isNotify = true
+		*s.isNotify = true
 	}()
+}
+
+func (s *Settings) shortcutChecker(keys []string, isNotify *bool, keyNumber int) bool {
+	if len(keys) < keyNumber {
+		if *isNotify {
+			dialog.ShowInformation("提示", fmt.Sprintf("快捷键必须至少%d个按键", keyNumber), *s.Window)
+		}
+		return false
+	}
+	return true
 }
 
 func (s *Settings) registerHotKey(modifiers []hotkey.Modifier, key hotkey.Key, onPress func(), isNotify *bool, preferencesKey string) {
@@ -562,6 +624,63 @@ func (s *Settings) getKey(key string) hotkey.Key {
 	}
 }
 
+func (s *Settings) getKeyForFyne(key string) fyne.KeyName {
+	switch strings.ToLower(key) {
+	case "a":
+		return fyne.KeyA
+	case "b":
+		return fyne.KeyB
+	case "c":
+		return fyne.KeyC
+	case "d":
+		return fyne.KeyD
+	case "e":
+		return fyne.KeyE
+	case "f":
+		return fyne.KeyF
+	case "g":
+		return fyne.KeyG
+	case "h":
+		return fyne.KeyH
+	case "i":
+		return fyne.KeyI
+	case "j":
+		return fyne.KeyJ
+	case "k":
+		return fyne.KeyK
+	case "l":
+		return fyne.KeyL
+	case "m":
+		return fyne.KeyM
+	case "n":
+		return fyne.KeyN
+	case "o":
+		return fyne.KeyO
+	case "p":
+		return fyne.KeyP
+	case "q":
+		return fyne.KeyQ
+	case "r":
+		return fyne.KeyR
+	case "s":
+		return fyne.KeyS
+	case "t":
+		return fyne.KeyT
+	case "u":
+		return fyne.KeyU
+	case "v":
+		return fyne.KeyV
+	case "w":
+		return fyne.KeyW
+	case "x":
+		return fyne.KeyX
+	case "y":
+		return fyne.KeyY
+	default:
+		return fyne.KeyZ
+	}
+}
+
 func (s *Settings) getKeyName(key hotkey.Key) string {
 	switch key {
 	case hotkey.Key(hotkey.KeyA):
@@ -616,5 +735,18 @@ func (s *Settings) getKeyName(key hotkey.Key) string {
 		return "y"
 	default:
 		return "z"
+	}
+}
+
+func (s *Settings) getModifier(key string) fyne.KeyModifier {
+	switch strings.ToLower(key) {
+	case "cmd":
+		return fyne.KeyModifierShortcutDefault
+	case "ctrl":
+		return fyne.KeyModifierControl
+	case "option", "alt":
+		return fyne.KeyModifierAlt
+	default:
+		return fyne.KeyModifierShift
 	}
 }

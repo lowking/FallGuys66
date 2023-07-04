@@ -384,6 +384,7 @@ func generateSearchContainer() []fyne.CanvasObject {
 	searchBtn.Resize(fyne.NewSize(90, height))
 	searchBtn.Move(fyne.NewPos(config.ToolbarPaddingLeft+keyWordEntry.Size().Width+config.Padding, y))
 
+	setting.OtherEntry["keyWordEntry"] = keyWordEntry
 	return []fyne.CanvasObject{keyWordEntry, searchBtn}
 }
 
