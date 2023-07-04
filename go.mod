@@ -8,6 +8,7 @@ require (
 	github.com/gorilla/websocket v1.5.0
 	github.com/stretchr/testify v1.8.1
 	github.com/wesovilabs/koazee v0.0.5
+	golang.design/x/hotkey v0.4.1
 	golang.org/x/text v0.6.0
 	gorm.io/driver/sqlite v1.5.2
 	gorm.io/gorm v1.25.2-0.20230530020048-26663ab9bf55

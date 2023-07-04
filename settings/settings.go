@@ -1,8 +1,12 @@
 package settings
 
 import (
+	"FallGuys66/common/cbm"
 	"FallGuys66/config"
 	"FallGuys66/data"
+	"FallGuys66/db"
+	"FallGuys66/db/model"
+	"FallGuys66/hotkeys"
 	"FallGuys66/live/douyu/lib/logger"
 	"FallGuys66/widgets/searchentry"
 	"fmt"
@@ -14,21 +18,25 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/go-vgo/robotgo"
+	"golang.design/x/hotkey"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
 )
 
 var (
-	lineHeight     = float32(50)
-	PAutoGetFgPid  = "PAutoGetFgPid"
-	PAutoFillMapId = "PAutoFillMapId"
-	PSelectShowPos = "PSelectShowPos"
-	PEnterMapIdPos = "PEnterMapIdPos"
-	PCodeEntryPos  = "PCodeEntryPos"
-	PConfirmBtnPos = "PConfirmBtnPos"
-	FgName         = "FallGuys_client"
-	fgLabelWidth   = float32(100)
+	lineHeight                  = float32(50)
+	PAutoGetFgPid               = "PAutoGetFgPid"
+	PAutoFillMapId              = "PAutoFillMapId"
+	PSelectShowPos              = "PSelectShowPos"
+	PEnterMapIdPos              = "PEnterMapIdPos"
+	PCodeEntryPos               = "PCodeEntryPos"
+	PConfirmBtnPos              = "PConfirmBtnPos"
+	PHotKeyPlayNext             = "PHotKeyPlayNext"
+	PHotKeyPlayNextOnSelectShow = "PHotKeyPlayNextOnSelectShow"
+	FgName                      = "FallGuys_client"
+	fgLabelWidth                = float32(100)
 )
 
 type Settings struct {
@@ -45,6 +53,7 @@ type Settings struct {
 
 	commonSettingItems []fyne.CanvasObject
 	fgSettingItems     []fyne.CanvasObject
+	hotKey             map[string]*hotkey.Hotkey
 }
 
 func NewSettings() *Settings {
@@ -58,6 +67,7 @@ func (s *Settings) Init(window *fyne.Window) *container.AppTabs {
 		container.NewTabItemWithIcon("　糖豆人　", data.FgLogo, s.GenFgSettings()),
 	)
 	settingTabs.SetTabLocation(container.TabLocationLeading)
+	s.hotKey = make(map[string]*hotkey.Hotkey)
 
 	return settingTabs
 }
@@ -337,23 +347,108 @@ func (s *Settings) genFgAutoClickSettingsRow() {
 	// 快捷键设置
 	// 根据给定参数生成连线
 	objects := []fyne.CanvasObject{selectShowPosEntry, enterMapIdPosEntry, codeEntryPosEntry, confirmBtnPosEntry}
-	s.genEntryWithLink(objects[1:], "例：ctrl+alt+n，回车保存", 150, 35, func(str string) {
+	b := false
+	var isNotify *bool
+	isNotify = &b
+	playNext := func(str string) {
 		keys := strings.Split(str, "+")
 		if len(keys) < 3 {
-			dialog.ShowInformation("提示", "快捷键必须至少3个按键", *s.Window)
+			if *isNotify {
+				dialog.ShowInformation("提示", "快捷键必须至少3个按键", *s.Window)
+			}
 			return
 		}
-	}, 2)
-	s.genEntryWithLink(objects, "例：ctrl+alt+p，回车保存", 150, 35, func(str string) {
+		go func() {
+			var modifiers []hotkey.Modifier
+			for i := 0; i < len(keys)-1; i++ {
+				modifiers = append(modifiers, hotkeys.GetModifier(keys[i]))
+			}
+			s.registerHotKey(modifiers, s.getKey(keys[len(keys)-1]), func() {
+				go func() {
+					maps := db.ListMap(1, 1, &model.MapInfo{State: "0"}, `created asc, map_id`)
+					db.UpdateMap(
+						model.MapInfo{MapId: maps[0].MapId, State: "1", PlayTime: time.Now()},
+						[]string{"State", "PlayTime"},
+						&model.MapInfo{State: "0"})
+					cbm.CallBackFunc("fg FillMapIdForPlayNext", maps[0].MapId, s)
+				}()
+			}, isNotify, PHotKeyPlayNext)
+		}()
+	}
+	playNextHotKeyStr := app.Preferences().StringWithFallback(PHotKeyPlayNext, "")
+	playNext(playNextHotKeyStr)
+	altName := "alt"
+	switch runtime.GOOS {
+	case "darwin":
+		altName = "option"
+	default:
+		altName = "alt"
+	}
+	s.genEntryWithLink(objects[1:], fmt.Sprintf("例：ctrl+%s+n，回车保存", altName), 170, 35, playNext, 2, playNextHotKeyStr)
+	playNextOnSelectShow := func(str string) {
 		keys := strings.Split(str, "+")
 		if len(keys) < 3 {
-			dialog.ShowInformation("提示", "快捷键必须至少3个按键", *s.Window)
+			if *isNotify {
+				dialog.ShowInformation("提示", "快捷键必须至少3个按键", *s.Window)
+			}
 			return
 		}
-	}, 1)
+		go func() {
+			var modifiers []hotkey.Modifier
+			for i := 0; i < len(keys)-1; i++ {
+				modifiers = append(modifiers, hotkeys.GetModifier(keys[i]))
+			}
+			s.registerHotKey(modifiers, s.getKey(keys[len(keys)-1]), func() {
+				go func() {
+					maps := db.ListMap(1, 1, &model.MapInfo{State: "0"}, `created asc, map_id`)
+					db.UpdateMap(
+						model.MapInfo{MapId: maps[0].MapId, State: "1", PlayTime: time.Now()},
+						[]string{"State", "PlayTime"},
+						&model.MapInfo{State: "0"})
+					cbm.CallBackFunc("fg FillMapIdForPlayNextOnSelectShow", maps[0].MapId, s)
+				}()
+			}, isNotify, PHotKeyPlayNextOnSelectShow)
+		}()
+	}
+	playNextOnSelectShowHotKeyStr := app.Preferences().StringWithFallback(PHotKeyPlayNextOnSelectShow, "")
+	playNextOnSelectShow(playNextOnSelectShowHotKeyStr)
+	// playNext(playNextOnSelectShowHotKeyStr)
+	s.genEntryWithLink(objects, fmt.Sprintf("例：ctrl+%s+p，回车保存", altName), 170, 35, playNextOnSelectShow, 1, playNextOnSelectShowHotKeyStr)
+	go func() {
+		time.Sleep(2 * time.Second)
+		*isNotify = true
+	}()
 }
 
-func (s *Settings) genEntryWithLink(objects []fyne.CanvasObject, placeHolder string, width float32, height float32, onSubmit func(s string), lineNo float32) {
+func (s *Settings) registerHotKey(modifiers []hotkey.Modifier, key hotkey.Key, onPress func(), isNotify *bool, preferencesKey string) {
+	modifier := ""
+	for _, modifierKey := range modifiers {
+		modifier = fmt.Sprintf("%s+%s", modifier, hotkeys.GetModifierName(modifierKey))
+	}
+	if len(modifiers) > 0 {
+		modifier = modifier[1:]
+	}
+	hotKeyStr := fmt.Sprintf("%s+%s", modifier, s.getKeyName(key))
+	if s.hotKey[hotKeyStr] != nil {
+		_ = s.hotKey[hotKeyStr].Unregister()
+	}
+	hk := hotkey.New(modifiers, key)
+	if err := hk.Register(); err != nil {
+		dialog.ShowInformation("提示", fmt.Sprintf("快捷键设置失败：%v", err), *s.Window)
+		return
+	} else {
+		if *isNotify {
+			fyne.CurrentApp().Preferences().SetString(preferencesKey, hotKeyStr)
+			dialog.ShowInformation("提示", fmt.Sprintf("快捷键[%s]设置成功", hotKeyStr), *s.Window)
+		}
+		s.hotKey[hotKeyStr] = hk
+	}
+	for range hk.Keydown() {
+		onPress()
+	}
+}
+
+func (s *Settings) genEntryWithLink(objects []fyne.CanvasObject, placeHolder string, width float32, height float32, onSubmit func(s string), lineNo float32, defaultValue string) {
 	// 根据objects计算连线起点坐标
 	linkStartEndpoint := canvas.NewRectangle(config.ShadowColor)
 	linkStartEndpoint.Resize(fyne.NewSize(5, height*lineNo))
@@ -402,5 +497,120 @@ func (s *Settings) genEntryWithLink(objects []fyne.CanvasObject, placeHolder str
 		linkEndEndpoint.Refresh()
 		link.Refresh()
 	}
+	entry.SetText(defaultValue)
 	s.fgSettingItems = append(s.fgSettingItems, entry)
+}
+
+func (s *Settings) getKey(key string) hotkey.Key {
+	switch strings.ToLower(key) {
+	case "a":
+		return hotkey.Key(hotkey.KeyA)
+	case "b":
+		return hotkey.Key(hotkey.KeyB)
+	case "c":
+		return hotkey.Key(hotkey.KeyC)
+	case "d":
+		return hotkey.Key(hotkey.KeyD)
+	case "e":
+		return hotkey.Key(hotkey.KeyE)
+	case "f":
+		return hotkey.Key(hotkey.KeyF)
+	case "g":
+		return hotkey.Key(hotkey.KeyG)
+	case "h":
+		return hotkey.Key(hotkey.KeyH)
+	case "i":
+		return hotkey.Key(hotkey.KeyI)
+	case "j":
+		return hotkey.Key(hotkey.KeyJ)
+	case "k":
+		return hotkey.Key(hotkey.KeyK)
+	case "l":
+		return hotkey.Key(hotkey.KeyL)
+	case "m":
+		return hotkey.Key(hotkey.KeyM)
+	case "n":
+		return hotkey.Key(hotkey.KeyN)
+	case "o":
+		return hotkey.Key(hotkey.KeyO)
+	case "p":
+		return hotkey.Key(hotkey.KeyP)
+	case "q":
+		return hotkey.Key(hotkey.KeyQ)
+	case "r":
+		return hotkey.Key(hotkey.KeyR)
+	case "s":
+		return hotkey.Key(hotkey.KeyS)
+	case "t":
+		return hotkey.Key(hotkey.KeyT)
+	case "u":
+		return hotkey.Key(hotkey.KeyU)
+	case "v":
+		return hotkey.Key(hotkey.KeyV)
+	case "w":
+		return hotkey.Key(hotkey.KeyW)
+	case "x":
+		return hotkey.Key(hotkey.KeyX)
+	case "y":
+		return hotkey.Key(hotkey.KeyY)
+	default:
+		return hotkey.Key(hotkey.KeyZ)
+	}
+}
+
+func (s *Settings) getKeyName(key hotkey.Key) string {
+	switch key {
+	case hotkey.Key(hotkey.KeyA):
+		return "a"
+	case hotkey.Key(hotkey.KeyB):
+		return "b"
+	case hotkey.Key(hotkey.KeyC):
+		return "c"
+	case hotkey.Key(hotkey.KeyD):
+		return "d"
+	case hotkey.Key(hotkey.KeyE):
+		return "e"
+	case hotkey.Key(hotkey.KeyF):
+		return "f"
+	case hotkey.Key(hotkey.KeyG):
+		return "g"
+	case hotkey.Key(hotkey.KeyH):
+		return "h"
+	case hotkey.Key(hotkey.KeyI):
+		return "i"
+	case hotkey.Key(hotkey.KeyJ):
+		return "j"
+	case hotkey.Key(hotkey.KeyK):
+		return "k"
+	case hotkey.Key(hotkey.KeyL):
+		return "l"
+	case hotkey.Key(hotkey.KeyM):
+		return "m"
+	case hotkey.Key(hotkey.KeyN):
+		return "n"
+	case hotkey.Key(hotkey.KeyO):
+		return "o"
+	case hotkey.Key(hotkey.KeyP):
+		return "p"
+	case hotkey.Key(hotkey.KeyQ):
+		return "q"
+	case hotkey.Key(hotkey.KeyR):
+		return "r"
+	case hotkey.Key(hotkey.KeyS):
+		return "s"
+	case hotkey.Key(hotkey.KeyT):
+		return "t"
+	case hotkey.Key(hotkey.KeyU):
+		return "u"
+	case hotkey.Key(hotkey.KeyV):
+		return "v"
+	case hotkey.Key(hotkey.KeyW):
+		return "w"
+	case hotkey.Key(hotkey.KeyX):
+		return "x"
+	case hotkey.Key(hotkey.KeyY):
+		return "y"
+	default:
+		return "z"
+	}
 }
