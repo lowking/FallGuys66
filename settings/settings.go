@@ -366,11 +366,13 @@ func (s *Settings) genFgAutoClickSettingsRow() {
 			s.registerHotKey(modifiers, s.getKey(keys[len(keys)-1]), func() {
 				go func() {
 					maps := db.ListMap(1, 1, &model.MapInfo{State: "0"}, `created asc, map_id`)
-					db.UpdateMap(
-						model.MapInfo{MapId: maps[0].MapId, State: "1", PlayTime: time.Now()},
-						[]string{"State", "PlayTime"},
-						&model.MapInfo{State: "0"})
-					cbm.CallBackFunc("fg FillMapIdForPlayNext", maps[0].MapId, s)
+					if len(maps) > 0 {
+						db.UpdateMap(
+							model.MapInfo{MapId: maps[0].MapId, State: "1", PlayTime: time.Now()},
+							[]string{"State", "PlayTime"},
+							&model.MapInfo{State: "0"})
+						cbm.CallBackFunc("fg FillMapIdForPlayNext", maps[0].MapId, s)
+					}
 				}()
 			}, isNotify, PHotKeyPlayNext)
 		}()
@@ -401,11 +403,13 @@ func (s *Settings) genFgAutoClickSettingsRow() {
 			s.registerHotKey(modifiers, s.getKey(keys[len(keys)-1]), func() {
 				go func() {
 					maps := db.ListMap(1, 1, &model.MapInfo{State: "0"}, `created asc, map_id`)
-					db.UpdateMap(
-						model.MapInfo{MapId: maps[0].MapId, State: "1", PlayTime: time.Now()},
-						[]string{"State", "PlayTime"},
-						&model.MapInfo{State: "0"})
-					cbm.CallBackFunc("fg FillMapIdForPlayNextOnSelectShow", maps[0].MapId, s)
+					if len(maps) > 0 {
+						db.UpdateMap(
+							model.MapInfo{MapId: maps[0].MapId, State: "1", PlayTime: time.Now()},
+							[]string{"State", "PlayTime"},
+							&model.MapInfo{State: "0"})
+						cbm.CallBackFunc("fg FillMapIdForPlayNextOnSelectShow", maps[0].MapId, s)
+					}
 				}()
 			}, isNotify, PHotKeyPlayNextOnSelectShow)
 		}()
