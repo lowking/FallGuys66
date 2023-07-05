@@ -43,3 +43,15 @@ func (e *SearchEntry) Tapped(event *fyne.PointEvent) {
 	}
 	e.OnTapped(event)
 }
+
+func (e *SearchEntry) Focus() {
+	if c := fyne.CurrentApp().Driver().CanvasForObject(e); c != nil {
+		c.Focus(e)
+	}
+}
+
+func (e *SearchEntry) UnFocus() {
+	if c := fyne.CurrentApp().Driver().CanvasForObject(e); c != nil {
+		c.Unfocus()
+	}
+}

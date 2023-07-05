@@ -23,6 +23,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -54,8 +55,10 @@ type Settings struct {
 	PosCodeEntry  *string
 	PosConfirmBtn *string
 
-	OtherEntry map[string]*searchentry.SearchEntry
+	SearchShortcut *desktop.CustomShortcut
+	OtherEntry     map[string]*searchentry.SearchEntry
 
+	propertyLock       sync.RWMutex
 	commonSettingItems []fyne.CanvasObject
 	fgSettingItems     []fyne.CanvasObject
 	hotKey             map[string]*hotkey.Hotkey
@@ -135,9 +138,11 @@ func (s *Settings) GenCommonSettings() *fyne.Container {
 			KeyName:  s.getKeyForFyne(keys[1]),
 			Modifier: s.getModifier(keys[0]),
 		}
+		s.SearchShortcut = scFocusSearch
 		(*s.Window).Canvas().RemoveShortcut(scFocusSearch)
 		(*s.Window).Canvas().AddShortcut(scFocusSearch, func(shortcut fyne.Shortcut) {
-			// TODO: 2023-07-04 支持选中文本
+			s.OtherEntry["keyWordEntry"].Focus()
+			s.OtherEntry["keyWordEntry"].TypedShortcut(&fyne.ShortcutSelectAll{})
 		})
 		if *s.isNotify {
 			app.Preferences().SetString(PScFocusSearch, strings.TrimSpace(str))
@@ -507,7 +512,9 @@ func (s *Settings) registerHotKey(modifiers []hotkey.Modifier, key hotkey.Key, o
 			fyne.CurrentApp().Preferences().SetString(preferencesKey, hotKeyStr)
 			dialog.ShowInformation("提示", fmt.Sprintf("快捷键[%s]设置成功", hotKeyStr), *s.Window)
 		}
+		s.propertyLock.Lock()
 		s.hotKey[hotKeyStr] = hk
+		s.propertyLock.Unlock()
 	}
 	for range hk.Keydown() {
 		onPress()

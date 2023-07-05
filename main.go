@@ -42,7 +42,7 @@ const PLiveHosts = "LiveHosts"
 var topWindow fyne.Window
 var tabs *container.AppTabs
 var setting *settings.Settings
-var version = "1.2.1"
+var version = "1.2.2"
 var driver fyne.Driver
 var window fyne.Window
 
