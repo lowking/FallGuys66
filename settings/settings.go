@@ -154,11 +154,6 @@ func (s *Settings) GenCommonSettings() *fyne.Container {
 	scFocusSearchEntry.SetText(scFocusSearchStr)
 	s.commonSettingItems = append(s.commonSettingItems, scFocusSearchEntry)
 
-	infoLabel := widget.NewLabel("目前不支持，等待后续实现")
-	infoLabel.Resize(fyne.NewSize(commonShortcutLabelWidth, lineHeight))
-	infoLabel.Move(fyne.NewPos(config.Padding+scFocusSearchLabel.Size().Width+scFocusSearchEntry.Size().Width, y))
-	s.commonSettingItems = append(s.commonSettingItems, infoLabel)
-
 	return container.NewWithoutLayout(s.commonSettingItems...)
 }
 
