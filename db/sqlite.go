@@ -6,6 +6,8 @@ import (
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	log "gorm.io/gorm/logger"
+	"os"
+	"path/filepath"
 	"runtime/debug"
 	"time"
 )
@@ -13,7 +15,18 @@ import (
 var Db *gorm.DB
 
 func init() {
-	db, err := gorm.Open(sqlite.Open("map.db"), &gorm.Config{
+	configDir, err := os.UserConfigDir()
+	if err != nil {
+		panic(err)
+	}
+	dbPath := filepath.Join(configDir, "fallguys66")
+	err = os.MkdirAll(dbPath, 0755)
+	if err != nil {
+		panic(err)
+	}
+	dbPath = filepath.Join(dbPath, "map.db")
+	logger.Infof("数据库文件路径：%s", dbPath)
+	db, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{
 		Logger: log.Default.LogMode(log.Info),
 		NowFunc: func() time.Time {
 			return time.Now().Local()
