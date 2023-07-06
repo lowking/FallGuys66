@@ -29,8 +29,10 @@ import (
 
 var (
 	lineHeight                  = float32(50)
+	cbIndentWidth               = float32(30)
 	PAutoGetFgPid               = "PAutoGetFgPid"
 	PAutoFillMapId              = "PAutoFillMapId"
+	PAutoConnect                = "PAutoConnect"
 	PSelectShowPos              = "PSelectShowPos"
 	PEnterMapIdPos              = "PEnterMapIdPos"
 	PCodeEntryPos               = "PCodeEntryPos"
@@ -46,8 +48,10 @@ var (
 type Settings struct {
 	FgPid         string
 	BtnGetFgPid   *widget.Button
+	BtnCon        *widget.Button
 	AutoGetFgPid  bool
 	AutoFillMapId bool
+	AutoConnect   bool
 	Window        *fyne.Window
 
 	PosSelectShow *string
@@ -93,17 +97,34 @@ func (s *Settings) Init(window *fyne.Window) *container.AppTabs {
 
 func (s *Settings) GenCommonSettings() *fyne.Container {
 	app := fyne.CurrentApp()
-	s.AutoGetFgPid = app.Preferences().BoolWithFallback(PAutoGetFgPid, false)
 	y := config.Padding
-	cbAutoGetFgPid := widget.NewCheckWithData("启动时，自动获取糖豆人进程ID", binding.BindBool(&s.AutoGetFgPid))
+	startupLabel := widget.NewLabel("启动时")
+	startupLabel.Alignment = fyne.TextAlignLeading
+	startupLabel.Resize(fyne.NewSize(commonShortcutLabelWidth, lineHeight))
+	startupLabel.Move(fyne.NewPos(config.Padding, y))
+	s.commonSettingItems = append(s.commonSettingItems, startupLabel)
+
+	y += lineHeight * 0.5
+	s.AutoGetFgPid = app.Preferences().BoolWithFallback(PAutoGetFgPid, false)
+	cbAutoGetFgPid := widget.NewCheckWithData("自动获取糖豆人进程ID", binding.BindBool(&s.AutoGetFgPid))
 	cbAutoGetFgPid.OnChanged = func(b bool) {
 		s.AutoGetFgPid = b
 		app.Preferences().SetBool(PAutoGetFgPid, s.AutoGetFgPid)
 	}
-	cbAutoGetFgPid.SetChecked(s.AutoGetFgPid)
 	cCbAutoGetFgPid := container.NewHBox(cbAutoGetFgPid)
-	cCbAutoGetFgPid.Move(fyne.NewPos(config.Padding, y))
+	cCbAutoGetFgPid.Move(fyne.NewPos(config.Padding+cbIndentWidth, y))
 	s.commonSettingItems = append(s.commonSettingItems, cCbAutoGetFgPid)
+
+	y += lineHeight * 0.5
+	s.AutoConnect = app.Preferences().BoolWithFallback(PAutoConnect, false)
+	cbAutoConnect := widget.NewCheckWithData("自动连接直播间弹幕", binding.BindBool(&s.AutoConnect))
+	cbAutoConnect.OnChanged = func(b bool) {
+		s.AutoConnect = b
+		app.Preferences().SetBool(PAutoConnect, s.AutoConnect)
+	}
+	cCbAutoConnect := container.NewHBox(cbAutoConnect)
+	cCbAutoConnect.Move(fyne.NewPos(config.Padding+cbIndentWidth, y))
+	s.commonSettingItems = append(s.commonSettingItems, cCbAutoConnect)
 
 	y += lineHeight
 	shortcutLabel := widget.NewLabel("快捷键")

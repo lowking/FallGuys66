@@ -42,7 +42,7 @@ const PLiveHosts = "LiveHosts"
 var topWindow fyne.Window
 var tabs *container.AppTabs
 var setting *settings.Settings
-var version = "1.2.2"
+var version = "1.2.3"
 var driver fyne.Driver
 var window fyne.Window
 
@@ -327,6 +327,7 @@ func main() {
 	cBtnCon := container.NewMax(btnCon)
 	cBtnCon.Resize(fyne.NewSize(65, 36))
 	cBtnCon.Move(fyne.NewPos(cLogo.Size().Width+config.ToolbarPaddingLeft+65+config.Padding*2+offsetX, config.ToolbarPaddingTop+offsetY))
+	setting.BtnCon = btnCon
 	elements = append(elements, cBtnCon)
 
 	// 版本信息
@@ -491,7 +492,10 @@ func logLifecycle(a fyne.App) {
 		handler.RefreshMapList(setting, window, tabs, 2, nil, &model.MapInfo{Star: "1"}, `created desc, map_id`, true)
 
 		if setting.AutoGetFgPid {
-			setting.BtnGetFgPid.OnTapped()
+			go setting.BtnGetFgPid.OnTapped()
+		}
+		if setting.AutoConnect {
+			go setting.BtnCon.OnTapped()
 		}
 	})
 	a.Lifecycle().SetOnStopped(func() {
