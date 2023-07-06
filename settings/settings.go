@@ -94,7 +94,7 @@ func (s *Settings) Init(window *fyne.Window) *container.AppTabs {
 func (s *Settings) GenCommonSettings() *fyne.Container {
 	app := fyne.CurrentApp()
 	s.AutoGetFgPid = app.Preferences().BoolWithFallback(PAutoGetFgPid, false)
-	y := lineHeight*0 + config.Padding
+	y := config.Padding
 	cbAutoGetFgPid := widget.NewCheckWithData("启动时，自动获取糖豆人进程ID", binding.BindBool(&s.AutoGetFgPid))
 	cbAutoGetFgPid.OnChanged = func(b bool) {
 		s.AutoGetFgPid = b
@@ -105,7 +105,7 @@ func (s *Settings) GenCommonSettings() *fyne.Container {
 	cCbAutoGetFgPid.Move(fyne.NewPos(config.Padding, y))
 	s.commonSettingItems = append(s.commonSettingItems, cCbAutoGetFgPid)
 
-	y = lineHeight*1 + config.Padding
+	y += lineHeight
 	shortcutLabel := widget.NewLabel("快捷键")
 	shortcutLabel.Alignment = fyne.TextAlignLeading
 	shortcutLabel.Resize(fyne.NewSize(commonShortcutLabelWidth, lineHeight))
@@ -113,7 +113,7 @@ func (s *Settings) GenCommonSettings() *fyne.Container {
 	s.commonSettingItems = append(s.commonSettingItems, shortcutLabel)
 
 	// 定位搜索文本框
-	y = lineHeight*1.5 + config.Padding
+	y += lineHeight * 0.5
 	scFocusSearchLabel := widget.NewLabel("定位搜索文本框：")
 	scFocusSearchLabel.Alignment = fyne.TextAlignTrailing
 	scFocusSearchLabel.Resize(fyne.NewSize(commonShortcutLabelWidth, lineHeight))
@@ -179,12 +179,12 @@ func (s *Settings) genGetFgPidSettingsRow() {
 	cCbAutoFillMapId.Move(fyne.NewPos(config.Padding, y))
 	s.fgSettingItems = append(s.fgSettingItems, cCbAutoFillMapId)
 
-	y = lineHeight*1 + config.Padding
+	y += lineHeight
 	infoLabel := canvas.NewText(`‼️ 如果自动获取不可用，请打开任务管理器查看并粘贴糖豆人进程ID（Pid）`, config.AccentColor)
 	infoLabel.Move(fyne.NewPos(config.Padding, y))
 	s.fgSettingItems = append(s.fgSettingItems, infoLabel)
 
-	y = lineHeight*1.5 + config.Padding
+	y += lineHeight * 0.5
 	fgLabel := widget.NewLabel("糖豆人进程ID：")
 	fgLabel.Alignment = fyne.TextAlignTrailing
 	fgLabel.Resize(fyne.NewSize(fgLabelWidth, lineHeight))
@@ -271,7 +271,7 @@ func (s *Settings) genFgAutoClickSettingsRow() {
 	infoLabel.Move(fyne.NewPos(config.Padding, y))
 	s.fgSettingItems = append(s.fgSettingItems, infoLabel)
 
-	y = lineHeight*3 + config.Padding
+	y += lineHeight * 0.5
 	fgLabel := widget.NewLabel("自动点击：")
 	fgLabel.Alignment = fyne.TextAlignTrailing
 	fgLabel.Resize(fyne.NewSize(fgLabelWidth, lineHeight))
@@ -279,7 +279,7 @@ func (s *Settings) genFgAutoClickSettingsRow() {
 	s.fgSettingItems = append(s.fgSettingItems, fgLabel)
 
 	// 选择节目按钮点击坐标文本框
-	y = lineHeight*3.5 + config.Padding
+	y += lineHeight * 0.5
 	pSelectShowPos := app.Preferences().StringWithFallback(PSelectShowPos, "")
 	selectShowPosEntry := searchentry.NewSearchEntry("x,y")
 	selectShowPosEntry.Wrapping = fyne.TextTruncate
