@@ -181,13 +181,13 @@ func main() {
 	tabs.OnSelected = func(item *container.TabItem) {
 		switch item.Text {
 		case "未玩列表":
-			go handler.RefreshMapList(setting, window, tabs, 0, nil, &model.MapInfo{State: "0"}, `created asc, map_id`, false)
+			go handler.RefreshMapList(setting, window, tabs, 0, nil, &model.MapInfo{State: "0"}, `created asc, map_id`, false, false)
 		case "已玩列表":
-			go handler.RefreshMapList(setting, window, tabs, 1, nil, &model.MapInfo{State: "1"}, `play_time desc, map_id`, false)
+			go handler.RefreshMapList(setting, window, tabs, 1, nil, &model.MapInfo{State: "1"}, `play_time desc, map_id`, false, false)
 		case "收藏列表":
-			go handler.RefreshMapList(setting, window, tabs, 2, nil, &model.MapInfo{Star: "1"}, `created desc, map_id`, false)
+			go handler.RefreshMapList(setting, window, tabs, 2, nil, &model.MapInfo{Star: "1"}, `created desc, map_id`, false, false)
 		case "搜索结果":
-			go handler.RefreshMapList(setting, window, tabs, 3, nil, &model.MapInfo{}, `created desc, map_id`, false)
+			go handler.RefreshMapList(setting, window, tabs, 3, nil, &model.MapInfo{}, `created desc, map_id`, false, false)
 		}
 	}
 	cTabList := container.NewBorder(nil, nil, nil, nil, tabs)
@@ -375,11 +375,11 @@ func generateSearchContainer() []fyne.CanvasObject {
 	keyWordEntry.OnSubmitted = func(_ string) {
 		time.Sleep(100 * time.Millisecond)
 		tabs.SelectIndex(3)
-		go handler.RefreshMapList(setting, window, tabs, 3, &keyWordEntry.Text, &model.MapInfo{}, `created desc, map_id`, false)
+		go handler.RefreshMapList(setting, window, tabs, 3, &keyWordEntry.Text, &model.MapInfo{}, `created desc, map_id`, false, false)
 	}
 	searchBtn := widget.NewButtonWithIcon("搜索", theme.SearchIcon(), func() {
 		tabs.SelectIndex(3)
-		go handler.RefreshMapList(setting, window, tabs, 3, &keyWordEntry.Text, &model.MapInfo{}, `created desc, map_id`, false)
+		go handler.RefreshMapList(setting, window, tabs, 3, &keyWordEntry.Text, &model.MapInfo{}, `created desc, map_id`, false, false)
 	})
 	searchBtn.Resize(fyne.NewSize(90, height))
 	searchBtn.Move(fyne.NewPos(config.ToolbarPaddingLeft+keyWordEntry.Size().Width+config.Padding, y))
@@ -485,10 +485,10 @@ func logLifecycle(a fyne.App) {
 		log.Println("Lifecycle: Started")
 		// 第一次加载列表
 		if a.Preferences().StringWithFallback(PDefaultLiveHostNo, "") != "" {
-			handler.RefreshMapList(setting, window, tabs, 0, nil, &model.MapInfo{State: "0"}, `created asc, map_id`, true)
+			handler.RefreshMapList(setting, window, tabs, 0, nil, &model.MapInfo{State: "0"}, `created asc, map_id`, true, false)
 		}
-		handler.RefreshMapList(setting, window, tabs, 1, nil, &model.MapInfo{State: "1"}, `play_time desc, map_id`, true)
-		handler.RefreshMapList(setting, window, tabs, 2, nil, &model.MapInfo{Star: "1"}, `created desc, map_id`, true)
+		handler.RefreshMapList(setting, window, tabs, 1, nil, &model.MapInfo{State: "1"}, `play_time desc, map_id`, true, false)
+		handler.RefreshMapList(setting, window, tabs, 2, nil, &model.MapInfo{Star: "1"}, `created desc, map_id`, true, false)
 
 		if setting.AutoGetFgPid {
 			go setting.BtnGetFgPid.OnTapped()
@@ -529,11 +529,11 @@ func logLifecycle(a fyne.App) {
 func refreshList() {
 	switch tabs.SelectedIndex() {
 	case 0:
-		go handler.RefreshMapList(setting, window, tabs, 0, nil, &model.MapInfo{State: "0"}, `created asc, map_id`, false)
+		go handler.RefreshMapList(setting, window, tabs, 0, nil, &model.MapInfo{State: "0"}, `created asc, map_id`, false, false)
 	case 1:
-		go handler.RefreshMapList(setting, window, tabs, 1, nil, &model.MapInfo{State: "1"}, `play_time desc, map_id`, false)
+		go handler.RefreshMapList(setting, window, tabs, 1, nil, &model.MapInfo{State: "1"}, `play_time desc, map_id`, false, false)
 	case 2:
-		go handler.RefreshMapList(setting, window, tabs, 2, nil, &model.MapInfo{Star: "1"}, `created desc, map_id`, false)
+		go handler.RefreshMapList(setting, window, tabs, 2, nil, &model.MapInfo{Star: "1"}, `created desc, map_id`, false, false)
 	}
 }
 
