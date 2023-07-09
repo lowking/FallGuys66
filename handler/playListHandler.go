@@ -8,6 +8,7 @@ import (
 	"FallGuys66/settings"
 	"FallGuys66/utils"
 	"FallGuys66/widgets/headertable"
+	"FallGuys66/widgets/pager"
 	"fmt"
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -187,11 +188,15 @@ func wrapStr(s string, rowLen int, isSingleLine bool) string {
 	return ts
 }
 
-const pageSize = 18
+var pSize = 17
+var pPageSize = &pSize
+
+const pageSize = 17
 
 var cache = make(map[string]string)
 var cacheHt = make(map[string]*headertable.HeaderTable)
 var cacheListHeader = make(map[string]headertable.TableOpts)
+var cacheCurrentNo = make(map[string]*int)
 var bindingsMap = make(map[string][]binding.Struct, 1)
 
 // 点击时临时存储单元格内容
@@ -208,11 +213,17 @@ var listMap *[pageSize]model.MapInfo
 var whereString = "map_id like ? or nn like ? or uid like ? or rid like ? or txt like ?"
 
 func RefreshMapList(settings *settings.Settings, window fyne.Window, tabs *container.AppTabs, idx int, keyWord *string, where *model.MapInfo, order string, recreate bool) {
+	key := fmt.Sprintf("map%d", idx)
+	if _, ok := cacheCurrentNo[key]; !ok {
+		no := 1
+		cacheCurrentNo[key] = &no
+	}
 	// 查询数据库获取最新列表
 	var tListMap []model.MapInfo
+	var count int64
 	switch idx {
 	case 0, 1, 2:
-		tListMap = db.ListMap(1, pageSize, where, order)
+		tListMap, count = db.ListMap(*cacheCurrentNo[key], pageSize, where, order)
 	case 3:
 		if keyWord == nil {
 			return
@@ -233,13 +244,13 @@ func RefreshMapList(settings *settings.Settings, window fyne.Window, tabs *conta
 			if rWhere != "" {
 				rWhere = rWhere[:len(rWhere)-3]
 			}
-			tListMap = db.SearchMap(1, pageSize, rWhere, order)
+			tListMap, count = db.SearchMap(*cacheCurrentNo[key], pageSize, rWhere, order)
 		}
 	}
-	refreshData(settings, window, tabs, idx, keyWord, where, order, recreate, tListMap)
+	refreshData(settings, window, tabs, idx, keyWord, where, order, &recreate, tListMap, count)
 }
 
-func refreshData(settings *settings.Settings, window fyne.Window, tabs *container.AppTabs, idx int, keyWord *string, where *model.MapInfo, order string, recreate bool, tListMap []model.MapInfo) {
+func refreshData(settings *settings.Settings, window fyne.Window, tabs *container.AppTabs, idx int, keyWord *string, where *model.MapInfo, order string, recreate *bool, tListMap []model.MapInfo, count int64) {
 	key := fmt.Sprintf("map%d", idx)
 	recreateKey := fmt.Sprintf("map%dRecreate", idx)
 	listLength := len(tListMap)
@@ -271,8 +282,7 @@ func refreshData(settings *settings.Settings, window fyne.Window, tabs *containe
 		}
 	}
 	// logger.Debugf("%v", listMap)
-	recreate = recreate || cache[recreateKey] == "true" || cacheHt[key] == nil
-	logger.Debugf("██%d-%v", idx, recreate)
+	*recreate = *recreate || cache[recreateKey] == "true" || cacheHt[key] == nil
 	tListHeader := cacheListHeader[key]
 	if listLength > 0 {
 		cache[recreateKey] = "false"
@@ -286,7 +296,7 @@ func refreshData(settings *settings.Settings, window fyne.Window, tabs *containe
 				(*listMap)[i] = tListMap[i]
 			}
 		}
-		if !recreate {
+		if !*recreate {
 			logger.Debugf("current index: %d, cacheHt: %v", idx, cacheHt)
 			if cacheHt[key].Data != nil {
 				cacheHt[key].Data.UnselectAll()
@@ -426,9 +436,12 @@ func refreshData(settings *settings.Settings, window fyne.Window, tabs *containe
 			}
 			cacheHt[key].Data.UnselectAll()
 		}
-		tabs.Items[idx].Content = container.NewMax(cacheHt[key])
+		tapped := func(pageNo int) {
+			RefreshMapList(settings, window, tabs, idx, keyWord, where, order, false)
+		}
+		cBorder := container.NewBorder(nil, pager.NewPager(cacheCurrentNo[key], pPageSize, &count, &tapped), nil, nil, cacheHt[key])
+		tabs.Items[idx].Content = cBorder
 	} else {
-		logger.Infof("idx: %d %s", idx, recreateKey)
 		cache[recreateKey] = "true"
 		tabs.Items[idx].Content = utils.MakeEmptyList(config.AccentColor)
 	}

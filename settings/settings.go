@@ -448,7 +448,7 @@ func (s *Settings) genFgAutoClickSettingsRow() {
 			}
 			s.registerHotKey(modifiers, s.getKey(keys[len(keys)-1]), func() {
 				go func() {
-					maps := db.ListMap(1, 1, &model.MapInfo{State: "0"}, `created asc, map_id`)
+					maps, _ := db.ListMap(1, 1, &model.MapInfo{State: "0"}, `created asc, map_id`)
 					if len(maps) > 0 {
 						db.UpdateMap(
 							model.MapInfo{MapId: maps[0].MapId, State: "1", PlayTime: time.Now()},
@@ -475,7 +475,7 @@ func (s *Settings) genFgAutoClickSettingsRow() {
 			}
 			s.registerHotKey(modifiers, s.getKey(keys[len(keys)-1]), func() {
 				go func() {
-					maps := db.ListMap(1, 1, &model.MapInfo{State: "0"}, `created asc, map_id`)
+					maps, _ := db.ListMap(1, 1, &model.MapInfo{State: "0"}, `created asc, map_id`)
 					if len(maps) > 0 {
 						db.UpdateMap(
 							model.MapInfo{MapId: maps[0].MapId, State: "1", PlayTime: time.Now()},

@@ -53,22 +53,26 @@ func InsertMap(mapInfo model.MapInfo) {
 	Db.Debug().Create(&mapInfo)
 }
 
-func ListMap(pageNo int, pageSize int, where *model.MapInfo, order string) []model.MapInfo {
+func ListMap(pageNo int, pageSize int, where *model.MapInfo, order string) ([]model.MapInfo, int64) {
 	start := (pageNo - 1) * pageSize
 	// end := pageNo * pageSize
 	var mapList []model.MapInfo
+	var count int64
 	Db.Debug().Where(&where).Limit(pageSize).Offset(start).Order(order).Find(&mapList)
+	Db.Debug().Model(&model.MapInfo{}).Where(&where).Count(&count)
 
-	return mapList
+	return mapList, count
 }
 
-func SearchMap(pageNo int, pageSize int, where string, order string) []model.MapInfo {
+func SearchMap(pageNo int, pageSize int, where string, order string) ([]model.MapInfo, int64) {
 	start := (pageNo - 1) * pageSize
 	// end := pageNo * pageSize
 	var mapList []model.MapInfo
+	var count int64
 	Db.Debug().Where(where).Limit(pageSize).Offset(start).Order(order).Find(&mapList)
+	Db.Debug().Model(&model.MapInfo{}).Where(where).Count(&count)
 
-	return mapList
+	return mapList, count
 }
 
 func UpdateMap(mapInfo model.MapInfo, set []string, where *model.MapInfo) {

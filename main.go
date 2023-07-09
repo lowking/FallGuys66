@@ -42,7 +42,7 @@ const PLiveHosts = "LiveHosts"
 var topWindow fyne.Window
 var tabs *container.AppTabs
 var setting *settings.Settings
-var version = "1.2.3"
+var version = "1.3.0"
 var driver fyne.Driver
 var window fyne.Window
 
@@ -52,7 +52,6 @@ func main() {
 	offsetX := float32(-50)
 	offsetY := float32(3)
 	offset := float32(-6)
-	appSize := fyne.NewSize(1005, 870)
 	application := app.NewWithID("pro.lowking.fallguys66")
 	application.Settings().SetTheme(&data.MyTheme{
 		Regular:    data.FontSmileySansOblique,
@@ -96,7 +95,7 @@ func main() {
 	bg := canvas.NewImageFromResource(data.Bg)
 	bgHeight := cLogo.Size().Height + config.Padding*3 + offset + 60
 	logger.Debugf("bg height: %v", bgHeight)
-	bg.Resize(fyne.NewSize(appSize.Width, bgHeight))
+	bg.Resize(fyne.NewSize(config.AppSize.Width, bgHeight))
 	bg.Move(fyne.NewPos(offset, offset))
 	elements = append(elements, bg)
 	elements = append(elements, cLogo)
@@ -156,7 +155,7 @@ func main() {
 	lCopyrightL.TextSize = 14
 	// lCopyrightL.Move(fyne.NewPos(0, appSize.Height-25))
 	lCopyrightL.Alignment = fyne.TextAlignTrailing
-	lCopyrightL.Move(fyne.NewPos(appSize.Width-10, 140))
+	lCopyrightL.Move(fyne.NewPos(config.AppSize.Width-10, 140))
 	lCopyrightR := canvas.NewText("© lowking 2023. All Rights Reserved.", color.RGBA{
 		R: 32,
 		G: 32,
@@ -166,7 +165,7 @@ func main() {
 	lCopyrightR.TextSize = 14
 	lCopyrightR.Alignment = fyne.TextAlignTrailing
 	// lCopyrightR.Move(fyne.NewPos(appSize.Width-10, appSize.Height-25))
-	lCopyrightR.Move(fyne.NewPos(appSize.Width-130, 140))
+	lCopyrightR.Move(fyne.NewPos(config.AppSize.Width-130, 140))
 	elements = append(elements, lCopyrightL)
 	elements = append(elements, lCopyrightR)
 
@@ -193,7 +192,7 @@ func main() {
 	}
 	cTabList := container.NewBorder(nil, nil, nil, nil, tabs)
 	cTabList.Move(fyne.NewPos(offset, cLogo.Size().Height+config.Padding*3+offset))
-	cTabList.Resize(fyne.NewSize(appSize.Width, appSize.Height-cLogo.Size().Height))
+	cTabList.Resize(fyne.NewSize(config.AppSize.Width, config.AppSize.Height-cLogo.Size().Height-config.Padding*3))
 	elements = append(elements, cTabList)
 
 	// 连接直播间按钮
@@ -334,7 +333,7 @@ func main() {
 	versionText := canvas.NewText(fmt.Sprintf("v%s", version), config.VersionColor)
 	versionText.TextSize = 14
 	versionText.Alignment = fyne.TextAlignTrailing
-	versionText.Move(fyne.NewPos(appSize.Width-10, 0))
+	versionText.Move(fyne.NewPos(config.AppSize.Width-10, 0))
 	elements = append(elements, versionText)
 
 	// 搜索相关
@@ -360,7 +359,7 @@ func main() {
 	gridLayout := container.NewWithoutLayout(elements...)
 
 	window.SetContent(gridLayout)
-	window.Resize(appSize)
+	window.Resize(config.AppSize)
 	window.CenterOnScreen()
 	window.SetFixedSize(true)
 	window.ShowAndRun()
