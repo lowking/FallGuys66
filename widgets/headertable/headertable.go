@@ -79,7 +79,7 @@ func (r headerTableRenderer) MinSize() fyne.Size {
 	}
 	headerMinSize := fyne.NewSize(0, 0)
 	if r.headerTable.Header != nil {
-		dataMinSize = r.headerTable.Header.MinSize()
+		headerMinSize = r.headerTable.Header.MinSize()
 	}
 	return fyne.NewSize(
 		float32(math.Max(float64(dataMinSize.Width), float64(headerMinSize.Width))),
