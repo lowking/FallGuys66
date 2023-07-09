@@ -270,6 +270,9 @@ func RefreshMapList(settings *settings.Settings, window fyne.Window, tabs *conta
 			cachePager[key] = pager.NewPager(cacheCurrentNo[key], pPageSize, &count, cachePager[key].OnTapped)
 			cBorder := container.NewBorder(nil, cachePager[key], nil, nil, cacheHt[key])
 			tabs.Items[idx].Content = cBorder
+		} else {
+			*cachePager[key].Total = count
+			(*cachePager[key].Items)[1].(*widget.Label).SetText(fmt.Sprintf("共 %d 条", count))
 		}
 	}
 	refreshData(settings, window, tabs, idx, keyWord, where, order, &recreate, tListMap, count, fromPager)

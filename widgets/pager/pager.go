@@ -1,6 +1,7 @@
 package pager
 
 import (
+	"fmt"
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/layout"
@@ -50,6 +51,7 @@ func NewPager(currentPageNo *int, pageSize *int, total *int64, onTapped *func(pa
 	p.BtnNextPage = btnNextPage
 	p.Items = &[]fyne.CanvasObject{}
 	*p.Items = append(*p.Items, layout.NewSpacer())
+	*p.Items = append(*p.Items, widget.NewLabel(fmt.Sprintf("共 %d 条", *p.Total)))
 	*p.Items = append(*p.Items, p.BtnPreviosPage)
 
 	p.Init(p.Total, p.PageSize)
@@ -87,15 +89,17 @@ func (p *Pager) Init(total *int64, pageSize *int) {
 	end := int(math.Min(float64(start+limit-1), float64(*p.PageCount-1)))
 	start = int(math.Max(2, float64(end-limit+1)))
 
-	// items前2个 占位和前一页按钮
-	isFirst := len(*p.Items) == 2
-	idx := 3
+	// items前3个 占位，总数和前一页按钮
+	isFirst := len(*p.Items) == 3
+	idx := 4
 	if isFirst {
 		*p.Items = append(*p.Items, widget.NewButton("首页", func() {
 			p.SelectPage(1)
 			updateBackBtn(p)
 		}))
 	}
+	// 更新总数
+	(*p.Items)[1].(*widget.Label).SetText(fmt.Sprintf("共 %d 条", *p.Total))
 	for i := start; i <= end; i++ {
 		ti := i
 		var currentItem *widget.Button
