@@ -36,7 +36,8 @@ func NewPager(currentPageNo *int, pageSize *int, total *int64, onTapped *func(pa
 		PageSize:      pageSize,
 		Total:         total,
 	}
-	p.OnTapped = onTapped
+	tap := *onTapped
+	p.OnTapped = &tap
 	btnPreviousPage := widget.NewButtonWithIcon("", theme.NavigateBackIcon(), func() {
 		p.SelectPage(*p.CurrentPageNo - 1)
 		updateBackBtn(p)
@@ -50,9 +51,10 @@ func NewPager(currentPageNo *int, pageSize *int, total *int64, onTapped *func(pa
 	p.Items = &[]fyne.CanvasObject{}
 	*p.Items = append(*p.Items, layout.NewSpacer())
 	*p.Items = append(*p.Items, p.BtnPreviosPage)
-	p.BtnPreviosPage.Disable()
 
-	p.Init(total, pageSize)
+	p.Init(p.Total, p.PageSize)
+	updateNextBtn(p)
+	updateBackBtn(p)
 	p.ExtendBaseWidget(p)
 
 	return p
