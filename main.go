@@ -192,15 +192,15 @@ func main() {
 	tabs.OnSelected = func(item *container.TabItem) {
 		switch item.Text {
 		case "未玩列表":
-			go handler.RefreshMapList(setting, window, tabs, 0, nil, handler.WhereMap[0], handler.OrderMap[0], false, false)
+			go handler.RefreshMapList(setting, window, tabs, 0, "", handler.WhereMap[0], handler.OrderMap[0], false, false)
 		case "已玩列表":
-			go handler.RefreshMapList(setting, window, tabs, 1, nil, handler.WhereMap[1], handler.OrderMap[1], false, false)
+			go handler.RefreshMapList(setting, window, tabs, 1, "", handler.WhereMap[1], handler.OrderMap[1], false, false)
 		case "收藏列表":
-			go handler.RefreshMapList(setting, window, tabs, 2, nil, handler.WhereMap[2], handler.OrderMap[2], false, false)
+			go handler.RefreshMapList(setting, window, tabs, 2, "", handler.WhereMap[2], handler.OrderMap[2], false, false)
 		case "黑名单":
-			go handler.RefreshMapList(setting, window, tabs, 3, nil, handler.WhereMap[3], handler.OrderMap[3], false, false)
+			go handler.RefreshMapList(setting, window, tabs, 3, "", handler.WhereMap[3], handler.OrderMap[3], false, false)
 		case "搜索结果":
-			go handler.RefreshMapList(setting, window, tabs, 4, nil, handler.WhereMap[4], handler.OrderMap[4], false, false)
+			go handler.RefreshMapList(setting, window, tabs, 4, "", handler.WhereMap[4], handler.OrderMap[4], false, false)
 		}
 	}
 	cTabList := container.NewBorder(nil, nil, nil, nil, tabs)
@@ -389,11 +389,11 @@ func generateSearchContainer() []fyne.CanvasObject {
 	keyWordEntry.OnSubmitted = func(_ string) {
 		time.Sleep(100 * time.Millisecond)
 		tabs.SelectIndex(idx)
-		go handler.RefreshMapList(setting, window, tabs, idx, &keyWordEntry.Text, handler.WhereMap[idx], handler.OrderMap[idx], false, false)
+		go handler.RefreshMapList(setting, window, tabs, idx, keyWordEntry.Text, handler.WhereMap[idx], handler.OrderMap[idx], false, false)
 	}
 	searchBtn := widget.NewButtonWithIcon("搜索", theme.SearchIcon(), func() {
 		tabs.SelectIndex(idx)
-		go handler.RefreshMapList(setting, window, tabs, idx, &keyWordEntry.Text, handler.WhereMap[idx], handler.OrderMap[idx], false, false)
+		go handler.RefreshMapList(setting, window, tabs, idx, keyWordEntry.Text, handler.WhereMap[idx], handler.OrderMap[idx], false, false)
 	})
 	searchBtn.Resize(fyne.NewSize(90, height))
 	searchBtn.Move(fyne.NewPos(config.ToolbarPaddingLeft+keyWordEntry.Size().Width+config.Padding, y))
@@ -499,10 +499,10 @@ func logLifecycle(a fyne.App) {
 		log.Println("Lifecycle: Started")
 		// 第一次加载列表
 		if a.Preferences().StringWithFallback(PDefaultLiveHostNo, "") != "" {
-			handler.RefreshMapList(setting, window, tabs, 0, nil, handler.WhereMap[0], handler.OrderMap[0], true, false)
+			handler.RefreshMapList(setting, window, tabs, 0, "", handler.WhereMap[0], handler.OrderMap[0], true, false)
 		}
-		handler.RefreshMapList(setting, window, tabs, 1, nil, handler.WhereMap[1], handler.OrderMap[1], true, false)
-		handler.RefreshMapList(setting, window, tabs, 2, nil, handler.WhereMap[2], handler.OrderMap[2], true, false)
+		handler.RefreshMapList(setting, window, tabs, 1, "", handler.WhereMap[1], handler.OrderMap[1], true, false)
+		handler.RefreshMapList(setting, window, tabs, 2, "", handler.WhereMap[2], handler.OrderMap[2], true, false)
 
 		if setting.AutoGetFgPid {
 			go setting.BtnGetFgPid.OnTapped()
@@ -543,11 +543,11 @@ func logLifecycle(a fyne.App) {
 func refreshList() {
 	switch tabs.SelectedIndex() {
 	case 0:
-		go handler.RefreshMapList(setting, window, tabs, 0, nil, handler.WhereMap[0], handler.OrderMap[0], false, false)
+		go handler.RefreshMapList(setting, window, tabs, 0, "", handler.WhereMap[0], handler.OrderMap[0], false, false)
 	case 1:
-		go handler.RefreshMapList(setting, window, tabs, 1, nil, handler.WhereMap[1], handler.OrderMap[1], false, false)
+		go handler.RefreshMapList(setting, window, tabs, 1, "", handler.WhereMap[1], handler.OrderMap[1], false, false)
 	case 2:
-		go handler.RefreshMapList(setting, window, tabs, 2, nil, handler.WhereMap[2], handler.OrderMap[2], false, false)
+		go handler.RefreshMapList(setting, window, tabs, 2, "", handler.WhereMap[2], handler.OrderMap[2], false, false)
 	}
 }
 

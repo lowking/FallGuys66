@@ -73,7 +73,17 @@ var blacklistHeader = headertable.TableOpts{
 var blacklistList = [pageSize]model.Blacklist{}
 var listBlacklist *[pageSize]model.Blacklist
 
-func refreshBlacklistData(settings *settings.Settings, window fyne.Window, tabs *container.AppTabs, idx int, keyWord *string, where interface{}, order string, recreate *bool, count int64, fromPager bool) {
+func refreshBlacklistData(
+	settings *settings.Settings,
+	window fyne.Window,
+	tabs *container.AppTabs,
+	idx int,
+	where interface{},
+	order string,
+	recreate *bool,
+	count int64,
+	fromPager bool,
+) {
 	key := fmt.Sprintf("map%d", idx)
 	recreateKey := fmt.Sprintf("map%dRecreate", idx)
 	listLength := len(tBlacklist)

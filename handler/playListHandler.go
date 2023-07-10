@@ -202,6 +202,7 @@ var (
 
 var cache = make(map[string]string)
 var cacheHt = make(map[string]*headertable.HeaderTable)
+var cacheKeyword = ""
 var cacheListHeader = make(map[string]headertable.TableOpts)
 var cacheCurrentNo = make(map[string]*int)
 var cachePager = make(map[string]*pager.Pager)
