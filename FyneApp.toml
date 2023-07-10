@@ -4,5 +4,5 @@ Website = "https://github.com/lowking"
   Icon = "data/assets/logo-white.png"
   Name = "FallGuys66"
   ID = "pro.lowking.fallguys66"
-  Version = "1.4.0"
-  Build = 24
+  Version = "1.4.1"
+  Build = 27

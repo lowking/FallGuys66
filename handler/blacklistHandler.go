@@ -126,7 +126,7 @@ func refreshBlacklistData(settings *settings.Settings, window fyne.Window, tabs 
 					db.DeleteBlacklist(model.Blacklist{
 						Uid: uid,
 					})
-					RefreshMapList(settings, window, tabs, idx, keyWord, WhereMap[idx], OrderMap[idx], false, false)
+					RefreshMapList(settings, window, tabs, idx, cacheKeyword, WhereMap[idx], OrderMap[idx], false, false)
 					dialog.ShowInformation("提示", fmt.Sprintf("已将[%s]从黑名单移除", nn), *settings.Window)
 				}()
 			}
@@ -166,7 +166,7 @@ func refreshBlacklistData(settings *settings.Settings, window fyne.Window, tabs 
 			cacheHt[key].Data.UnselectAll()
 		}
 		tapped := func(pageNo int) {
-			RefreshMapList(settings, window, tabs, idx, keyWord, WhereMap[idx], OrderMap[idx], false, true)
+			RefreshMapList(settings, window, tabs, idx, cacheKeyword, WhereMap[idx], OrderMap[idx], false, true)
 		}
 		listPager := pager.NewPager(cacheCurrentNo[key], pPageSize, &count, &tapped)
 		cachePager[key] = listPager
