@@ -42,7 +42,7 @@ const PLiveHosts = "LiveHosts"
 var topWindow fyne.Window
 var tabs *container.AppTabs
 var setting *settings.Settings
-var version = "1.3.1"
+var version = "1.4.0"
 var driver fyne.Driver
 var window fyne.Window
 
@@ -64,6 +64,16 @@ func main() {
 	driver = application.Driver()
 	// 托盘图标
 	makeTray(application)
+	handler.WhereMap[0] = &model.MapInfo{State: "0"}
+	handler.OrderMap[0] = `created asc, map_id`
+	handler.WhereMap[1] = &model.MapInfo{State: "1"}
+	handler.OrderMap[1] = `play_time desc, map_id`
+	handler.WhereMap[2] = &model.MapInfo{Star: "1"}
+	handler.OrderMap[2] = `created desc, map_id`
+	handler.WhereMap[3] = &model.Blacklist{}
+	handler.OrderMap[3] = `created desc`
+	handler.WhereMap[4] = &model.MapInfo{}
+	handler.OrderMap[4] = `created desc, map_id`
 	logLifecycle(application)
 	window = application.NewWindow(config.AppName)
 	topWindow = window
@@ -175,19 +185,22 @@ func main() {
 		container.NewTabItem("未玩列表", utils.MakeEmptyList(config.AccentColor)),
 		container.NewTabItem("已玩列表", utils.MakeEmptyList(config.AccentColor)),
 		container.NewTabItem("收藏列表", utils.MakeEmptyList(config.AccentColor)),
+		container.NewTabItem("黑名单", utils.MakeEmptyList(config.AccentColor)),
 		container.NewTabItem("搜索结果", utils.MakeEmptyList(config.AccentColor)),
-		container.NewTabItem("设置", setting.Init(&window)),
+		container.NewTabItem("设置", setting.Init(&window, &driver)),
 	)
 	tabs.OnSelected = func(item *container.TabItem) {
 		switch item.Text {
 		case "未玩列表":
-			go handler.RefreshMapList(setting, window, tabs, 0, nil, &model.MapInfo{State: "0"}, `created asc, map_id`, false, false)
+			go handler.RefreshMapList(setting, window, tabs, 0, nil, handler.WhereMap[0], handler.OrderMap[0], false, false)
 		case "已玩列表":
-			go handler.RefreshMapList(setting, window, tabs, 1, nil, &model.MapInfo{State: "1"}, `play_time desc, map_id`, false, false)
+			go handler.RefreshMapList(setting, window, tabs, 1, nil, handler.WhereMap[1], handler.OrderMap[1], false, false)
 		case "收藏列表":
-			go handler.RefreshMapList(setting, window, tabs, 2, nil, &model.MapInfo{Star: "1"}, `created desc, map_id`, false, false)
+			go handler.RefreshMapList(setting, window, tabs, 2, nil, handler.WhereMap[2], handler.OrderMap[2], false, false)
+		case "黑名单":
+			go handler.RefreshMapList(setting, window, tabs, 3, nil, handler.WhereMap[3], handler.OrderMap[3], false, false)
 		case "搜索结果":
-			go handler.RefreshMapList(setting, window, tabs, 3, nil, &model.MapInfo{}, `created desc, map_id`, false, false)
+			go handler.RefreshMapList(setting, window, tabs, 4, nil, handler.WhereMap[4], handler.OrderMap[4], false, false)
 		}
 	}
 	cTabList := container.NewBorder(nil, nil, nil, nil, tabs)
@@ -372,14 +385,15 @@ func generateSearchContainer() []fyne.CanvasObject {
 	keyWordEntry.Wrapping = fyne.TextTruncate
 	keyWordEntry.Resize(fyne.NewSize(250, height))
 	keyWordEntry.Move(fyne.NewPos(config.ToolbarPaddingLeft, y))
+	idx := 4
 	keyWordEntry.OnSubmitted = func(_ string) {
 		time.Sleep(100 * time.Millisecond)
-		tabs.SelectIndex(3)
-		go handler.RefreshMapList(setting, window, tabs, 3, &keyWordEntry.Text, &model.MapInfo{}, `created desc, map_id`, false, false)
+		tabs.SelectIndex(idx)
+		go handler.RefreshMapList(setting, window, tabs, idx, &keyWordEntry.Text, handler.WhereMap[idx], handler.OrderMap[idx], false, false)
 	}
 	searchBtn := widget.NewButtonWithIcon("搜索", theme.SearchIcon(), func() {
-		tabs.SelectIndex(3)
-		go handler.RefreshMapList(setting, window, tabs, 3, &keyWordEntry.Text, &model.MapInfo{}, `created desc, map_id`, false, false)
+		tabs.SelectIndex(idx)
+		go handler.RefreshMapList(setting, window, tabs, idx, &keyWordEntry.Text, handler.WhereMap[idx], handler.OrderMap[idx], false, false)
 	})
 	searchBtn.Resize(fyne.NewSize(90, height))
 	searchBtn.Move(fyne.NewPos(config.ToolbarPaddingLeft+keyWordEntry.Size().Width+config.Padding, y))
@@ -485,10 +499,10 @@ func logLifecycle(a fyne.App) {
 		log.Println("Lifecycle: Started")
 		// 第一次加载列表
 		if a.Preferences().StringWithFallback(PDefaultLiveHostNo, "") != "" {
-			handler.RefreshMapList(setting, window, tabs, 0, nil, &model.MapInfo{State: "0"}, `created asc, map_id`, true, false)
+			handler.RefreshMapList(setting, window, tabs, 0, nil, handler.WhereMap[0], handler.OrderMap[0], true, false)
 		}
-		handler.RefreshMapList(setting, window, tabs, 1, nil, &model.MapInfo{State: "1"}, `play_time desc, map_id`, true, false)
-		handler.RefreshMapList(setting, window, tabs, 2, nil, &model.MapInfo{Star: "1"}, `created desc, map_id`, true, false)
+		handler.RefreshMapList(setting, window, tabs, 1, nil, handler.WhereMap[1], handler.OrderMap[1], true, false)
+		handler.RefreshMapList(setting, window, tabs, 2, nil, handler.WhereMap[2], handler.OrderMap[2], true, false)
 
 		if setting.AutoGetFgPid {
 			go setting.BtnGetFgPid.OnTapped()
@@ -529,11 +543,11 @@ func logLifecycle(a fyne.App) {
 func refreshList() {
 	switch tabs.SelectedIndex() {
 	case 0:
-		go handler.RefreshMapList(setting, window, tabs, 0, nil, &model.MapInfo{State: "0"}, `created asc, map_id`, false, false)
+		go handler.RefreshMapList(setting, window, tabs, 0, nil, handler.WhereMap[0], handler.OrderMap[0], false, false)
 	case 1:
-		go handler.RefreshMapList(setting, window, tabs, 1, nil, &model.MapInfo{State: "1"}, `play_time desc, map_id`, false, false)
+		go handler.RefreshMapList(setting, window, tabs, 1, nil, handler.WhereMap[1], handler.OrderMap[1], false, false)
 	case 2:
-		go handler.RefreshMapList(setting, window, tabs, 2, nil, &model.MapInfo{Star: "1"}, `created desc, map_id`, false, false)
+		go handler.RefreshMapList(setting, window, tabs, 2, nil, handler.WhereMap[2], handler.OrderMap[2], false, false)
 	}
 }
 

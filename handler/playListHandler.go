@@ -13,6 +13,7 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/data/binding"
+	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/widget"
 	"github.com/wesovilabs/koazee"
 	"golang.org/x/text/width"
@@ -194,6 +195,11 @@ var pPageSize = &pSize
 
 const pageSize = 17
 
+var (
+	WhereMap = make(map[int]interface{})
+	OrderMap = make(map[int]string)
+)
+
 var cache = make(map[string]string)
 var cacheHt = make(map[string]*headertable.HeaderTable)
 var cacheListHeader = make(map[string]headertable.TableOpts)
@@ -204,17 +210,19 @@ var bindingsMap = make(map[string][]binding.Struct, 1)
 // 点击时临时存储单元格内容
 var cellTempString string
 var bsCellTempString = binding.BindString(&cellTempString)
-var mapIdTempString string
-var bsMapIdTempString = binding.BindString(&mapIdTempString)
+var mapInfoTemp model.MapInfo
+var bsMapInfoTemp = binding.BindStruct(&mapInfoTemp)
 
 var listMapPlay = [pageSize]model.MapInfo{}
 var listMapPlayed = [pageSize]model.MapInfo{}
 var listMapStar = [pageSize]model.MapInfo{}
 var searchResult = [pageSize]model.MapInfo{}
 var listMap *[pageSize]model.MapInfo
+var tListMap = make(map[string][]model.MapInfo)
+var tBlacklist []model.Blacklist
 var whereString = "map_id like ? or nn like ? or uid like ? or rid like ? or txt like ?"
 
-func RefreshMapList(settings *settings.Settings, window fyne.Window, tabs *container.AppTabs, idx int, keyWord *string, where *model.MapInfo, order string, recreate bool, fromPager bool) {
+func RefreshMapList(settings *settings.Settings, window fyne.Window, tabs *container.AppTabs, idx int, keyWord *string, where interface{}, order string, recreate bool, fromPager bool) {
 	key := fmt.Sprintf("map%d", idx)
 	if _, ok := cacheCurrentNo[key]; !ok {
 		no := 1
@@ -222,21 +230,31 @@ func RefreshMapList(settings *settings.Settings, window fyne.Window, tabs *conta
 	}
 	// 查询数据库获取最新列表
 	isRefresh := false
-	var tListMap []model.MapInfo
 	var count int64
 	switch idx {
 	case 0, 1, 2:
-		tListMap, count = db.ListMap(*cacheCurrentNo[key], pageSize, where, order)
-		if len(tListMap) == 0 {
+		tListMap[key], count = db.ListMap(*cacheCurrentNo[key], pageSize, where.(*model.MapInfo), order, idx == 0)
+		if len(tListMap[key]) == 0 {
 			// 如果刷新发现没数据，页码-1再次刷新，直到页码为1
 			if *cacheCurrentNo[key] <= 1 {
 				break
 			}
 			*cacheCurrentNo[key]--
-			RefreshMapList(settings, window, tabs, idx, keyWord, where, order, recreate, fromPager)
+			RefreshMapList(settings, window, tabs, idx, keyWord, WhereMap[idx], OrderMap[idx], recreate, fromPager)
 			return
 		}
 	case 3:
+		tBlacklist, count = db.ListBlacklist(*cacheCurrentNo[key], pageSize, where.(*model.Blacklist), order)
+		if len(tBlacklist) == 0 {
+			// 如果刷新发现没数据，页码-1再次刷新，直到页码为1
+			if *cacheCurrentNo[key] <= 1 {
+				break
+			}
+			*cacheCurrentNo[key]--
+			RefreshMapList(settings, window, tabs, idx, keyWord, WhereMap[idx], OrderMap[idx], recreate, fromPager)
+			return
+		}
+	case 4:
 		if keyWord == nil {
 			return
 		}
@@ -261,7 +279,7 @@ func RefreshMapList(settings *settings.Settings, window fyne.Window, tabs *conta
 				*cacheCurrentNo[key] = 1
 				isRefresh = true
 			}
-			tListMap, count = db.SearchMap(*cacheCurrentNo[key], pageSize, rWhere, order)
+			tListMap[key], count = db.SearchMap(*cacheCurrentNo[key], pageSize, rWhere, order)
 		}
 	}
 	// 总页数变了就得刷新一次页码
@@ -275,13 +293,13 @@ func RefreshMapList(settings *settings.Settings, window fyne.Window, tabs *conta
 			(*cachePager[key].Items)[1].(*widget.Label).SetText(fmt.Sprintf("共 %d 条", count))
 		}
 	}
-	refreshData(settings, window, tabs, idx, keyWord, where, order, &recreate, tListMap, count, fromPager)
+	refreshData(settings, window, tabs, idx, keyWord, where, order, &recreate, count, fromPager)
 }
 
-func refreshData(settings *settings.Settings, window fyne.Window, tabs *container.AppTabs, idx int, keyWord *string, where *model.MapInfo, order string, recreate *bool, tListMap []model.MapInfo, count int64, fromPager bool) {
+func refreshData(settings *settings.Settings, window fyne.Window, tabs *container.AppTabs, idx int, keyWord *string, where interface{}, order string, recreate *bool, count int64, fromPager bool) {
 	key := fmt.Sprintf("map%d", idx)
 	recreateKey := fmt.Sprintf("map%dRecreate", idx)
-	listLength := len(tListMap)
+	listLength := len(tListMap[key])
 	switch idx {
 	case 0:
 		listMap = &listMapPlay
@@ -304,6 +322,13 @@ func refreshData(settings *settings.Settings, window fyne.Window, tabs *containe
 			cacheListHeader[key] = listHeader
 		}
 	case 3:
+		listBlacklist = &blacklistList
+		if _, ok := cacheListHeader[key]; !ok {
+			cacheListHeader[key] = blacklistHeader
+		}
+		refreshBlacklistData(settings, window, tabs, idx, keyWord, where, order, recreate, count, fromPager)
+		return
+	case 4:
 		listMap = &searchResult
 		if _, ok := cacheListHeader[key]; !ok {
 			cacheListHeader[key] = listHeader
@@ -321,7 +346,7 @@ func refreshData(settings *settings.Settings, window fyne.Window, tabs *containe
 			if i >= listLength {
 				(*listMap)[i] = model.MapInfo{}
 			} else {
-				(*listMap)[i] = tListMap[i]
+				(*listMap)[i] = tListMap[key][i]
 			}
 		}
 		if !*recreate {
@@ -330,7 +355,7 @@ func refreshData(settings *settings.Settings, window fyne.Window, tabs *containe
 				cacheHt[key].Data.UnselectAll()
 			}
 			cacheHt[key].Refresh()
-			logger.Infof("refresh finish, total: %v", len(tListMap))
+			logger.Infof("refresh finish, total: %v", len(tListMap[key]))
 			return
 		}
 		bindingsMap[key] = make([]binding.Struct, pageSize)
@@ -346,41 +371,79 @@ func refreshData(settings *settings.Settings, window fyne.Window, tabs *containe
 		}
 		firstMenuItem := fyne.NewMenuItem("", firstItemAction)
 		playMenuItem := fyne.NewMenuItem("游玩", func() {
-			if s, err := bsMapIdTempString.Get(); err == nil {
-				window.Clipboard().SetContent(s)
-				go utils.FillMapId(s, settings)
+			if s, err := bsMapInfoTemp.GetValue("MapId"); err == nil {
+				window.Clipboard().SetContent(s.(string))
+				go utils.FillMapId(s.(string), settings)
 				go func() {
 					db.UpdateMap(
-						model.MapInfo{MapId: s, State: "1", PlayTime: time.Now()},
+						model.MapInfo{MapId: s.(string), State: "1", PlayTime: time.Now()},
 						[]string{"State", "PlayTime"},
 						&model.MapInfo{State: "0"})
-					RefreshMapList(settings, window, tabs, idx, keyWord, where, order, false, false)
+					RefreshMapList(settings, window, tabs, idx, keyWord, WhereMap[idx], OrderMap[idx], false, false)
+				}()
+			}
+		})
+		blockMenuItem := fyne.NewMenuItem("拉黑", func() {
+			var uid, nn string
+			var err error
+			var s interface{}
+			if s, err = bsMapInfoTemp.GetValue("Nn"); err == nil {
+				nn = s.(string)
+			}
+			if s, err = bsMapInfoTemp.GetValue("Uid"); err == nil {
+				uid = s.(string)
+				go func() {
+					db.InsertBlacklist(model.Blacklist{
+						Uid:     uid,
+						Nn:      nn,
+						Created: time.Now(),
+					})
+					RefreshMapList(settings, window, tabs, idx, keyWord, WhereMap[idx], OrderMap[idx], false, false)
+					dialog.ShowInformation("提示", fmt.Sprintf("已拉黑[%s]，未玩列表不再显示与他相关的", nn), *settings.Window)
+				}()
+			}
+		})
+		releaseMenuItem := fyne.NewMenuItem("取消拉黑", func() {
+			var uid, nn string
+			var err error
+			var s interface{}
+			if s, err = bsMapInfoTemp.GetValue("Nn"); err == nil {
+				nn = s.(string)
+			}
+			if s, err = bsMapInfoTemp.GetValue("Uid"); err == nil {
+				uid = s.(string)
+				go func() {
+					db.DeleteBlacklist(model.Blacklist{
+						Uid: uid,
+					})
+					RefreshMapList(settings, window, tabs, idx, keyWord, WhereMap[idx], OrderMap[idx], false, false)
+					dialog.ShowInformation("提示", fmt.Sprintf("已将[%s]从黑名单移除", nn), *settings.Window)
 				}()
 			}
 		})
 		starMenuItem := fyne.NewMenuItem("收藏", func() {
-			if s, err := bsMapIdTempString.Get(); err == nil {
-				window.Clipboard().SetContent(s)
-				go utils.FillMapId(s, settings)
+			if s, err := bsMapInfoTemp.GetValue("MapId"); err == nil {
+				window.Clipboard().SetContent(s.(string))
+				go utils.FillMapId(s.(string), settings)
 				go func() {
 					db.UpdateMap(
-						model.MapInfo{MapId: s, Star: "1"},
+						model.MapInfo{MapId: s.(string), Star: "1"},
 						[]string{"Star"},
 						&model.MapInfo{Star: "0"})
-					RefreshMapList(settings, window, tabs, idx, keyWord, where, order, false, false)
+					RefreshMapList(settings, window, tabs, idx, keyWord, WhereMap[idx], OrderMap[idx], false, false)
 				}()
 			}
 		})
 		unStarMenuItem := fyne.NewMenuItem("取消收藏", func() {
-			if s, err := bsMapIdTempString.Get(); err == nil {
-				window.Clipboard().SetContent(s)
-				go utils.FillMapId(s, settings)
+			if s, err := bsMapInfoTemp.GetValue("MapId"); err == nil {
+				window.Clipboard().SetContent(s.(string))
+				go utils.FillMapId(s.(string), settings)
 				go func() {
 					db.UpdateMap(
-						model.MapInfo{MapId: s, Star: "0"},
+						model.MapInfo{MapId: s.(string), Star: "0"},
 						[]string{"Star"},
 						&model.MapInfo{Star: "1"})
-					RefreshMapList(settings, window, tabs, idx, keyWord, where, order, false, false)
+					RefreshMapList(settings, window, tabs, idx, keyWord, WhereMap[idx], OrderMap[idx], false, false)
 				}()
 			}
 		})
@@ -392,13 +455,15 @@ func refreshData(settings *settings.Settings, window fyne.Window, tabs *containe
 			row := bindingsMap[key][id.Row]
 			colKey := tListHeader.ColAttrs[id.Col].Name
 			if value, err := row.GetValue(colKey); err == nil {
-				// 每次点击记录地图Id
+				// 每次点击记录信息
 				if mid, err := row.GetValue("MapId"); err == nil {
-					if mid == "" {
-						cacheHt[key].Data.UnselectAll()
-						return
-					}
-					_ = bsMapIdTempString.Set(mid.(string))
+					_ = bsMapInfoTemp.SetValue("MapId", mid.(string))
+				}
+				if uid, err := row.GetValue("Uid"); err == nil {
+					_ = bsMapInfoTemp.SetValue("Uid", uid.(string))
+				}
+				if nn, err := row.GetValue("Nn"); err == nil {
+					_ = bsMapInfoTemp.SetValue("Nn", nn.(string))
 				}
 				// 处理单元格字符
 				valueString := ""
@@ -406,6 +471,10 @@ func refreshData(settings *settings.Settings, window fyne.Window, tabs *containe
 					valueString = s
 				} else if s, ok := value.(time.Time); ok {
 					valueString = s.Format("2006-01-02 15:04:05")
+				}
+				if valueString == "" {
+					cacheHt[key].Data.UnselectAll()
+					return
 				}
 
 				star, _ := row.GetValue("Star")
@@ -416,36 +485,26 @@ func refreshData(settings *settings.Settings, window fyne.Window, tabs *containe
 					deleteTargetItem = unStarMenuItem
 					addTargetItem = starMenuItem
 				}
-				index := -1
-				for i, item := range tableMenu.Items {
-					if item.Label == deleteTargetItem.Label {
-						index = i
-						break
-					}
+				addOrDeleteMenuItem(tableMenu, deleteTargetItem, addTargetItem)
+				// 查库，判断用户是否被拉黑，再处理菜单
+				uid, _ := bsMapInfoTemp.GetValue("Uid")
+				c := db.CountBlacklist(&model.Blacklist{Uid: uid.(string)})
+				deleteTargetItem = blockMenuItem
+				addTargetItem = releaseMenuItem
+				if c == 0 {
+					deleteTargetItem = releaseMenuItem
+					addTargetItem = blockMenuItem
 				}
-				if index > -1 {
-					if slice, err := utils.DeleteSlice(tableMenu.Items, index); err == nil {
-						tableMenu.Items = slice.([]*fyne.MenuItem)
-					}
-				}
-				index = -1
-				for i, item := range tableMenu.Items {
-					if item.Label == addTargetItem.Label {
-						index = i
-						break
-					}
-				}
-				if index == -1 {
-					tableMenu.Items = append(tableMenu.Items, addTargetItem)
-				}
+				addOrDeleteMenuItem(tableMenu, deleteTargetItem, addTargetItem)
 
 				// 处理点击状态和收藏，移除第一个菜单
-				shouldBe := 3
+				shouldBe := 4
 				switch colKey {
 				case "State", "Star", "Level":
 					if len(tableMenu.Items) == shouldBe {
 						_, stream := koazee.StreamOf(tableMenu.Items).Pop()
 						tableMenu.Items = stream.Out().Val().([]*fyne.MenuItem)
+						shouldBe--
 					}
 				default:
 					if len(tableMenu.Items) < shouldBe {
@@ -465,7 +524,7 @@ func refreshData(settings *settings.Settings, window fyne.Window, tabs *containe
 			cacheHt[key].Data.UnselectAll()
 		}
 		tapped := func(pageNo int) {
-			RefreshMapList(settings, window, tabs, idx, keyWord, where, order, false, true)
+			RefreshMapList(settings, window, tabs, idx, keyWord, WhereMap[idx], OrderMap[idx], false, true)
 		}
 		listPager := pager.NewPager(cacheCurrentNo[key], pPageSize, &count, &tapped)
 		cachePager[key] = listPager
@@ -474,6 +533,31 @@ func refreshData(settings *settings.Settings, window fyne.Window, tabs *containe
 	} else {
 		cache[recreateKey] = "true"
 		tabs.Items[idx].Content = utils.MakeEmptyList(config.AccentColor)
+	}
+}
+
+func addOrDeleteMenuItem(tableMenu *fyne.Menu, deleteTargetItem *fyne.MenuItem, addTargetItem *fyne.MenuItem) {
+	index := -1
+	for i, item := range tableMenu.Items {
+		if item.Label == deleteTargetItem.Label {
+			index = i
+			break
+		}
+	}
+	if index > -1 {
+		if slice, err := utils.DeleteSlice(tableMenu.Items, index); err == nil {
+			tableMenu.Items = slice.([]*fyne.MenuItem)
+		}
+	}
+	index = -1
+	for i, item := range tableMenu.Items {
+		if item.Label == addTargetItem.Label {
+			index = i
+			break
+		}
+	}
+	if index == -1 {
+		tableMenu.Items = append(tableMenu.Items, addTargetItem)
 	}
 }
 

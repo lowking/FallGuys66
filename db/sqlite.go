@@ -38,7 +38,11 @@ func init() {
 	Db = db
 	err = Db.AutoMigrate(&model.MapInfo{})
 	if err != nil {
-		panic("failed to create table")
+		panic(err)
+	}
+	err = Db.AutoMigrate(&model.Blacklist{})
+	if err != nil {
+		panic(err)
 	}
 }
 
@@ -53,13 +57,18 @@ func InsertMap(mapInfo model.MapInfo) {
 	Db.Debug().Create(&mapInfo)
 }
 
-func ListMap(pageNo int, pageSize int, where *model.MapInfo, order string) ([]model.MapInfo, int64) {
+func ListMap(pageNo int, pageSize int, where *model.MapInfo, order string, excludeBlack bool) ([]model.MapInfo, int64) {
 	start := (pageNo - 1) * pageSize
 	// end := pageNo * pageSize
 	var mapList []model.MapInfo
 	var count int64
-	Db.Debug().Where(&where).Limit(pageSize).Offset(start).Order(order).Find(&mapList)
-	Db.Debug().Model(&model.MapInfo{}).Where(&where).Count(&count)
+	if excludeBlack {
+		Db.Debug().Where(&where).Where("uid not in (?)", Db.Model(&model.Blacklist{}).Select("uid")).Limit(pageSize).Offset(start).Order(order).Find(&mapList)
+		Db.Debug().Model(&model.MapInfo{}).Where(&where).Where("uid not in (?)", Db.Model(&model.Blacklist{}).Select("uid")).Count(&count)
+	} else {
+		Db.Debug().Where(&where).Limit(pageSize).Offset(start).Order(order).Find(&mapList)
+		Db.Debug().Model(&model.MapInfo{}).Where(&where).Count(&count)
+	}
 
 	return mapList, count
 }
@@ -77,4 +86,29 @@ func SearchMap(pageNo int, pageSize int, where string, order string) ([]model.Ma
 
 func UpdateMap(mapInfo model.MapInfo, set []string, where *model.MapInfo) {
 	Db.Debug().Where(&where).Model(&mapInfo).Select(set).Updates(&mapInfo)
+}
+
+func InsertBlacklist(blacklist model.Blacklist) {
+	Db.Debug().Create(&blacklist)
+}
+
+func DeleteBlacklist(blacklist model.Blacklist) {
+	Db.Debug().Delete(&blacklist)
+}
+
+func ListBlacklist(pageNo int, pageSize int, where *model.Blacklist, order string) ([]model.Blacklist, int64) {
+	start := (pageNo - 1) * pageSize
+	var blacklist []model.Blacklist
+	var count int64
+	Db.Debug().Where(&where).Limit(pageSize).Offset(start).Order(order).Find(&blacklist)
+	Db.Debug().Model(&model.Blacklist{}).Where(&where).Count(&count)
+
+	return blacklist, count
+}
+
+func CountBlacklist(where *model.Blacklist) int64 {
+	var count int64
+	Db.Debug().Model(&model.Blacklist{}).Where(&where).Count(&count)
+
+	return count
 }

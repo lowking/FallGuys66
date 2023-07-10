@@ -53,6 +53,7 @@ type Settings struct {
 	AutoFillMapId bool
 	AutoConnect   bool
 	Window        *fyne.Window
+	Driver        *fyne.Driver
 
 	PosSelectShow *string
 	PosEnterMapId *string
@@ -74,8 +75,9 @@ func NewSettings() *Settings {
 	return &Settings{}
 }
 
-func (s *Settings) Init(window *fyne.Window) *container.AppTabs {
+func (s *Settings) Init(window *fyne.Window, driver *fyne.Driver) *container.AppTabs {
 	s.Window = window
+	s.Driver = driver
 	b := false
 	s.isNotify = &b
 	switch runtime.GOOS {
@@ -448,7 +450,7 @@ func (s *Settings) genFgAutoClickSettingsRow() {
 			}
 			s.registerHotKey(modifiers, s.getKey(keys[len(keys)-1]), func() {
 				go func() {
-					maps, _ := db.ListMap(1, 1, &model.MapInfo{State: "0"}, `created asc, map_id`)
+					maps, _ := db.ListMap(1, 1, &model.MapInfo{State: "0"}, `created asc, map_id`, true)
 					if len(maps) > 0 {
 						db.UpdateMap(
 							model.MapInfo{MapId: maps[0].MapId, State: "1", PlayTime: time.Now()},
@@ -475,7 +477,7 @@ func (s *Settings) genFgAutoClickSettingsRow() {
 			}
 			s.registerHotKey(modifiers, s.getKey(keys[len(keys)-1]), func() {
 				go func() {
-					maps, _ := db.ListMap(1, 1, &model.MapInfo{State: "0"}, `created asc, map_id`)
+					maps, _ := db.ListMap(1, 1, &model.MapInfo{State: "0"}, `created asc, map_id`, true)
 					if len(maps) > 0 {
 						db.UpdateMap(
 							model.MapInfo{MapId: maps[0].MapId, State: "1", PlayTime: time.Now()},
