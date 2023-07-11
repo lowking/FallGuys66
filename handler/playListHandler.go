@@ -28,6 +28,9 @@ func init() {
 }
 
 var isCleanMapId = false
+
+// "｟", "｠", "《", "》", "（", "）", "＜", "＞", "［", "］", "｢", "｣", "〈", "〉", "「", "」", "『", "』", "【", "】", "〔", "〕", "〖", "〗", "〘", "〙", "〚", "〛", "‘", "’", "‛", "“", "”", "„", "‟", "\"", "(", ")", "<", ">", "[", "]",
+var punctuation = []string{"＂", "＃", "＄", "％", "＆", "＇", "＊", "＋", "，", "－", "／", "：", "；", "＝", "＠", "＼", "＾", "＿", "｀", "｛", "｜", "｝", "～", "､", "　", "、", "〃", "〜", "〝", "〞", "〟", "〰", "〾", "〿", "–", "—", "…", "‧", "﹏", "﹑", "﹔", "·", "．", "！", "？", "｡", "。", "!", "#", "$", "%", "&", "'", "*", "+", ",", "-", ".", "/", ":", ";", "=", "?", "@", "\\", "^", "_", "`", "{", "|", "}", "~"}
 var listHeader = headertable.TableOpts{
 	RefWidth: "reference width",
 	ColAttrs: []headertable.ColAttr{
@@ -151,6 +154,17 @@ var listHeader = headertable.TableOpts{
 				if isCleanMapId {
 					for _, mapId := range mapRe.FindAllString(t, -1) {
 						t = strings.ReplaceAll(t, mapId, "")
+					}
+					source := i.(string)
+					index := strings.Index(source, t)
+					if index >= len(source)-len(t) {
+						t = strings.TrimLeftFunc(strings.TrimSpace(t), func(r rune) bool {
+							return utils.In(punctuation, string(r))
+						})
+					} else {
+						t = strings.TrimRightFunc(strings.TrimSpace(t), func(r rune) bool {
+							return utils.In(punctuation, string(r))
+						})
 					}
 				}
 				return strings.TrimSpace(t)
