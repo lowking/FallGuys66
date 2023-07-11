@@ -152,6 +152,10 @@ func refreshBlacklistData(
 				// 每次点击记录信息
 				if uid, err := row.GetValue("Uid"); err == nil {
 					_ = bsMapInfoTemp.SetValue("Uid", uid.(string))
+					if uid == "" {
+						cacheHt[key].Data.UnselectAll()
+						return
+					}
 				}
 				if nn, err := row.GetValue("Nn"); err == nil {
 					_ = bsMapInfoTemp.SetValue("Nn", nn.(string))
@@ -162,10 +166,6 @@ func refreshBlacklistData(
 					valueString = s
 				} else if s, ok := value.(time.Time); ok {
 					valueString = s.Format("2006-01-02 15:04:05")
-				}
-				if valueString == "" {
-					cacheHt[key].Data.UnselectAll()
-					return
 				}
 				tableMenu.Items[0].Label = valueString
 				_ = bsCellTempString.Set(valueString)
