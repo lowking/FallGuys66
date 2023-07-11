@@ -509,6 +509,10 @@ func refreshData(
 				// 每次点击记录信息
 				if mid, err := row.GetValue("MapId"); err == nil {
 					_ = bsMapInfoTemp.SetValue("MapId", mid.(string))
+					if mid == "" {
+						cacheHt[key].Data.UnselectAll()
+						return
+					}
 				}
 				if uid, err := row.GetValue("Uid"); err == nil {
 					_ = bsMapInfoTemp.SetValue("Uid", uid.(string))
@@ -525,10 +529,6 @@ func refreshData(
 					}
 				} else if s, ok := value.(time.Time); ok {
 					valueString = s.Format("2006-01-02 15:04:05")
-				}
-				if valueString == "" {
-					cacheHt[key].Data.UnselectAll()
-					return
 				}
 
 				star, _ := row.GetValue("Star")
