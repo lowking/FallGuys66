@@ -33,6 +33,7 @@ var (
 	PAutoGetFgPid               = "PAutoGetFgPid"
 	PAutoFillMapId              = "PAutoFillMapId"
 	PAutoConnect                = "PAutoConnect"
+	PIsCleanMapId               = "PIsCleanMapId"
 	PSelectShowPos              = "PSelectShowPos"
 	PEnterMapIdPos              = "PEnterMapIdPos"
 	PCodeEntryPos               = "PCodeEntryPos"
@@ -52,6 +53,7 @@ type Settings struct {
 	AutoGetFgPid  bool
 	AutoFillMapId bool
 	AutoConnect   bool
+	IsCleanMapId  bool
 	Window        *fyne.Window
 	Driver        *fyne.Driver
 
@@ -127,6 +129,25 @@ func (s *Settings) GenCommonSettings() *fyne.Container {
 	cCbAutoConnect := container.NewHBox(cbAutoConnect)
 	cCbAutoConnect.Move(fyne.NewPos(config.Padding+cbIndentWidth, y))
 	s.commonSettingItems = append(s.commonSettingItems, cCbAutoConnect)
+
+	y += lineHeight
+	othersLabel := widget.NewLabel("其他")
+	othersLabel.Alignment = fyne.TextAlignLeading
+	othersLabel.Resize(fyne.NewSize(commonShortcutLabelWidth, lineHeight))
+	othersLabel.Move(fyne.NewPos(config.Padding, y))
+	s.commonSettingItems = append(s.commonSettingItems, othersLabel)
+
+	y += lineHeight * 0.5
+	s.IsCleanMapId = app.Preferences().BoolWithFallback(PIsCleanMapId, false)
+	cbIsCleanMapId := widget.NewCheckWithData("原始弹幕不显示地图代码", binding.BindBool(&s.IsCleanMapId))
+	cbIsCleanMapId.OnChanged = func(b bool) {
+		s.IsCleanMapId = b
+		app.Preferences().SetBool(PIsCleanMapId, s.IsCleanMapId)
+		cbm.CallBackFunc("sv isCleanMapId", b)
+	}
+	cCbIsCleanMapId := container.NewHBox(cbIsCleanMapId)
+	cCbIsCleanMapId.Move(fyne.NewPos(config.Padding+cbIndentWidth, y))
+	s.commonSettingItems = append(s.commonSettingItems, cCbIsCleanMapId)
 
 	y += lineHeight
 	shortcutLabel := widget.NewLabel("快捷键")

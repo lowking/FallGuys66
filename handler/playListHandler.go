@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"FallGuys66/common/cbm"
 	"FallGuys66/config"
 	"FallGuys66/db"
 	"FallGuys66/db/model"
@@ -22,6 +23,11 @@ import (
 	"time"
 )
 
+func init() {
+	cbm.RegisterCallBack("sv isCleanMapId", func(b bool) { isCleanMapId = b })
+}
+
+var isCleanMapId = false
 var listHeader = headertable.TableOpts{
 	RefWidth: "reference width",
 	ColAttrs: []headertable.ColAttr{
@@ -142,7 +148,12 @@ var listHeader = headertable.TableOpts{
 			WidthPercent: 200,
 			Converter: func(i interface{}) string {
 				t := i.(string)
-				return t
+				if isCleanMapId {
+					for _, mapId := range mapRe.FindAllString(t, -1) {
+						t = strings.ReplaceAll(t, mapId, "")
+					}
+				}
+				return strings.TrimSpace(t)
 			},
 		},
 		{
