@@ -46,7 +46,7 @@ var blacklistHeader = headertable.TableOpts{
 			DataStyle: headertable.CellStyle{
 				Alignment: fyne.TextAlignCenter,
 			},
-			WidthPercent: 320,
+			WidthPercent: 352,
 		},
 		{
 			Name:   "Created",
