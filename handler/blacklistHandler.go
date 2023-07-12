@@ -31,7 +31,7 @@ var blacklistHeader = headertable.TableOpts{
 			DataStyle: headertable.CellStyle{
 				Alignment: fyne.TextAlignCenter,
 			},
-			WidthPercent: 400,
+			WidthPercent: 500,
 			Converter: func(i interface{}, row binding.Struct) string {
 				return i.(string)
 			},
@@ -46,7 +46,7 @@ var blacklistHeader = headertable.TableOpts{
 			DataStyle: headertable.CellStyle{
 				Alignment: fyne.TextAlignCenter,
 			},
-			WidthPercent: 352,
+			WidthPercent: 344,
 		},
 		{
 			Name:   "Created",

@@ -424,7 +424,7 @@ func main() {
 	remarkText := widget.NewRichTextFromMarkdown(config.RemarkText)
 	remarkText.Wrapping = fyne.TextWrapBreak
 	remarkText.Resize(fyne.NewSize(540, 100))
-	remarkText.Move(fyne.NewPos(560, 14))
+	remarkText.Move(fyne.NewPos(560, 0))
 	elements = append(elements, remarkText)
 	go func() {
 		for {
