@@ -32,7 +32,7 @@ var blacklistHeader = headertable.TableOpts{
 				Alignment: fyne.TextAlignCenter,
 			},
 			WidthPercent: 400,
-			Converter: func(i interface{}) string {
+			Converter: func(i interface{}, row binding.Struct) string {
 				return i.(string)
 			},
 		},
@@ -59,7 +59,7 @@ var blacklistHeader = headertable.TableOpts{
 				Alignment: fyne.TextAlignTrailing,
 			},
 			WidthPercent: 135,
-			Converter: func(i interface{}) string {
+			Converter: func(i interface{}, row binding.Struct) string {
 				t := i.(time.Time)
 				if t.IsZero() {
 					return ""

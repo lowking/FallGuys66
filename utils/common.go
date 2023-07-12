@@ -18,6 +18,18 @@ func In(strArray []string, target string) bool {
 	}
 	return false
 }
+func Index[T any](v T, array []T) int {
+	if n := len(array); array != nil && n != 0 {
+		i := 0
+		for !reflect.DeepEqual(v, array[i]) {
+			i++
+		}
+		if i != n {
+			return i
+		}
+	}
+	return -1
+}
 
 func DeleteSlice(slice interface{}, index int) (interface{}, error) {
 	sliceValue := reflect.ValueOf(slice)

@@ -1,6 +1,7 @@
 package headertable
 
 import (
+	"fyne.io/fyne/v2/data/binding"
 	"math"
 
 	"fyne.io/fyne/v2"
@@ -17,7 +18,7 @@ type HeaderTable struct {
 	Data      *widget.Table
 }
 
-type BindingConverter func(interface{}) string
+type BindingConverter func(interface{}, binding.Struct) string
 
 func NewHeaderTable(tableOpts *TableOpts) *HeaderTable {
 	t := &HeaderTable{

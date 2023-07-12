@@ -11,18 +11,19 @@ import (
 
 var mapRe = regexp.MustCompile(`([\d]{4}-[\d]{4}-[\d]{4})`)
 
-func FilterMap(msg client.Item) {
+func FilterMap(msg client.Item, platform string) {
 	logger.Debugf("%s[%s][%s]: %s", msg.Nn, msg.Level, msg.Uid, msg.Txt)
 	for _, mapId := range mapRe.FindAllString(msg.Txt, -1) {
 		db.InsertMap(model.MapInfo{
-			MapId:   mapId,
-			Rid:     msg.Rid,
-			Nn:      msg.Nn,
-			Uid:     msg.Uid,
-			Txt:     msg.Txt,
-			Level:   msg.Level,
-			Tst:     msg.Tst,
-			Created: time.Now(),
+			MapId:        mapId,
+			Rid:          msg.Rid,
+			LivePlatform: platform,
+			Nn:           msg.Nn,
+			Uid:          msg.Uid,
+			Txt:          msg.Txt,
+			Level:        msg.Level,
+			Tst:          msg.Tst,
+			Created:      time.Now(),
 		})
 	}
 }

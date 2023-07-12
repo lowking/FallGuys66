@@ -7,6 +7,7 @@ import (
 	_ "FallGuys66/db"
 	"FallGuys66/db/model"
 	"FallGuys66/handler"
+	"FallGuys66/live/bilibili"
 	"FallGuys66/live/douyu/DMconfig/config"
 	"FallGuys66/live/douyu/DYtype"
 	"FallGuys66/live/douyu/client"
@@ -29,6 +30,7 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"sync"
@@ -38,14 +40,15 @@ import (
 const preferenceCurrentTutorial = "currentTutorial"
 const PDefaultLiveHostNo = "DefaultLiveHostNo"
 const PLiveHosts = "LiveHosts"
+const PLivePlatform = "PLivePlatform"
 
 var topWindow fyne.Window
 var tabs *container.AppTabs
 var setting *settings.Settings
-var version = "1.5.2"
+var version = "1.6.0"
 var driver fyne.Driver
 var window fyne.Window
-
+var biliClient *gobilibili.BiliBiliClient
 var enableQueryLoop = true
 
 func main() {
@@ -131,6 +134,7 @@ func main() {
 	})
 	tLiveHostNo.TextSize = 35
 	tLiveHostNo.Move(fyne.NewPos(cLogo.Size().Width+config.ToolbarPaddingLeft+optionSize.Width+config.Padding*2+offsetX, config.ToolbarPaddingTop+offsetY-3))
+	tLiveHostNo.Hide()
 	elements = append(elements, tLiveHostNo)
 	liveHosts := []string{
 		"156277",
@@ -142,8 +146,6 @@ func main() {
 	// bindLiveHosts := binding.BindStringList(&liveHosts)
 	liveHostOption := widget.NewSelectEntry(liveHosts)
 	liveHostOption.TextStyle.Bold = true
-	liveHostOption.OnCursorChanged = func() {
-	}
 	liveHostOption.SetPlaceHolder("请输入/选择直播间号")
 	liveHost := ""
 	liveHostOption.OnChanged = func(s string) {
@@ -154,6 +156,17 @@ func main() {
 	cLiveHostOption.Resize(optionSize)
 	cLiveHostOption.Move(fyne.NewPos(cLogo.Size().Width+config.ToolbarPaddingLeft+optionSize.Width+config.Padding*2+offsetX, config.ToolbarPaddingTop+offsetY))
 	elements = append(elements, cLiveHostOption)
+
+	// 初始化平台选项
+	livePlatformOptions := []string{"Douyu", "Bilibili"}
+	livePlatform := application.Preferences().StringWithFallback(PLivePlatform, "Douyu")
+	rLivePlatform := widget.NewRadioGroup(livePlatformOptions, func(p string) {
+		livePlatform = p
+		application.Preferences().SetString(PLivePlatform, p)
+	})
+	rLivePlatform.SetSelected(livePlatform)
+	rLivePlatform.Move(fyne.NewPos(cLiveHostOption.Position().X+cLiveHostOption.Size().Width+config.Padding, cLiveHostOption.Position().Y))
+	elements = append(elements, rLivePlatform)
 
 	// 初始化copyright
 	lCopyrightL := canvas.NewText("斗鱼ID：石疯悦耳", color.RGBA{
@@ -218,11 +231,11 @@ func main() {
 		}
 		defer lock.Unlock()
 		if liveHost == "" {
-			btnConSetDefault(btnCon, liveHostOption)
-			dialog.ShowInformation("提示", "请填写斗鱼直播间号", window)
+			btnConSetDefault(btnCon, liveHostOption, rLivePlatform, tLiveHostNo)
+			dialog.ShowInformation("提示", "请填写直播间号", window)
 			return
 		} else if _, err := strconv.Atoi(liveHost); err != nil && liveHost != "dev" {
-			btnConSetDefault(btnCon, liveHostOption)
+			btnConSetDefault(btnCon, liveHostOption, rLivePlatform, tLiveHostNo)
 			dialog.ShowInformation("提示", "请输入纯数字直播间号", window)
 			liveHostOption.SetText("")
 			window.Canvas().Focus(liveHostOption)
@@ -236,42 +249,89 @@ func main() {
 			btnCon.Icon = theme.ViewRefreshIcon()
 			btnCon.Text = "..."
 			btnCon.Refresh()
+			rLivePlatform.Disable()
 			connectSuc := false
 			time.Sleep(1 * time.Second)
 			if liveHost != "dev" {
 				// 连接弹幕
-				logger.Infof("connecting douyu: %s", liveHost)
-				spiderConfig := &DMconfig.DMconfig{
-					Rid:            liveHost,
-					LoginMsg:       "type@=loginreq/room_id@=%s/dfl@=sn@A=105@Sss@A=1/username@=%s/uid@=%s/ver@=20190610/aver@=218101901/ct@=0/",
-					LoginJoinGroup: "type@=joingroup/rid@=%s/gid@=-9999/",
-					Url:            "wss://danmuproxy.douyu.com:8506/",
-				}
-				out := make(chan client.Item, 30)
-				webSocketClient = client.DyBarrageWebSocketClient{
-					ItemIn: out,
-					Config: spiderConfig,
-					MsgBreakers: DYtype.CodeBreakershandler{
-						IsLive: false,
-					},
-				}
-				go func() {
-					webSocketClient.Init()
-					webSocketClient.Start()
-					logger.Infof("disconnect %s", liveHost)
-				}()
-				go func() {
-					// 获取弹幕，处理消息
-					for {
-						msg := <-out
-						switch msg.Type {
-						case "chatmsg":
-							handler.FilterMap(msg)
-						default:
-							logger.ShowJson("[%s]not handle msg: %s", msg.Type, msg)
+				logger.Infof("connecting %s: %s", livePlatform, liveHost)
+				deferFunc := func() {
+					err := recover()
+					if err != nil {
+						dialog.ShowInformation("提示", "连接异常断开，请重新连接！", window)
+						btnConSetDefault(btnCon, liveHostOption, rLivePlatform, tLiveHostNo)
+						btnCon.Refresh()
+						// 删除下拉框对应直播间
+						if index := utils.Index(liveHost, liveHosts); index != -1 {
+							slice, _ := utils.DeleteSlice(liveHosts, index)
+							options := slice.([]string)
+							liveHostOption.SetOptions(options)
+							liveHostOption.Refresh()
+							application.Preferences().SetString(PLiveHosts, strings.Join(options, "|"))
 						}
+						debug.PrintStack()
 					}
-				}()
+				}
+				switch livePlatform {
+				case "Douyu":
+					spiderConfig := &DMconfig.DMconfig{
+						Rid:            liveHost,
+						LoginMsg:       "type@=loginreq/room_id@=%s/dfl@=sn@A=105@Sss@A=1/username@=%s/uid@=%s/ver@=20190610/aver@=218101901/ct@=0/",
+						LoginJoinGroup: "type@=joingroup/rid@=%s/gid@=-9999/",
+						Url:            "wss://danmuproxy.douyu.com:8506/",
+					}
+					out := make(chan client.Item, 30)
+					webSocketClient = client.DyBarrageWebSocketClient{
+						ItemIn: out,
+						Config: spiderConfig,
+						MsgBreakers: DYtype.CodeBreakershandler{
+							IsLive: false,
+						},
+					}
+					go func() {
+						defer deferFunc()
+						webSocketClient.Init()
+						webSocketClient.Start()
+						logger.Infof("disconnect %s", liveHost)
+					}()
+					go func() {
+						// 获取弹幕，处理消息
+						for {
+							msg := <-out
+							switch msg.Type {
+							case "chatmsg":
+								handler.FilterMap(msg, livePlatform)
+							default:
+								logger.ShowJson("[%s]not handle msg: %s", msg.Type, msg)
+							}
+						}
+					}()
+				case "Bilibili":
+					go func() {
+						defer deferFunc()
+						if biliClient == nil {
+							biliClient = gobilibili.NewBiliBiliClient()
+							biliClient.RegHandleFunc(gobilibili.CmdDanmuMsg, func(c *gobilibili.Context) bool {
+								info := c.GetDanmuInfo()
+								logger.ShowJson("[%v]handle msg: %s", rLivePlatform.Disabled(), info)
+								handler.FilterMap(client.Item{
+									Rid:   liveHost,
+									Uid:   strconv.Itoa(info.UID),
+									Txt:   info.Text,
+									Nn:    info.Uname,
+									Level: strconv.Itoa(info.Level),
+									Tst:   false,
+								}, livePlatform)
+
+								return false
+							})
+						}
+						liveHostInt, _ := strconv.Atoi(liveHost)
+						if err := biliClient.ConnectServer(liveHostInt); err != nil {
+							panic(err)
+						}
+					}()
+				}
 				connectSuc = true
 			} else {
 				// 开发模式模拟获取id
@@ -298,7 +358,7 @@ func main() {
 							Level:   "",
 							Tst:     true,
 							Payload: nil,
-						})
+						}, "")
 					}
 					logger.Debugf("mock %d map", count)
 				}()
@@ -309,6 +369,7 @@ func main() {
 				btnCon.Text = "成功"
 				btnCon.Icon = theme.ConfirmIcon()
 				liveHostOption.Hide()
+				tLiveHostNo.Show()
 				tLiveHostNo.Text = liveHost
 				tLiveHostNo.Refresh()
 				// 更新下拉框
@@ -328,9 +389,15 @@ func main() {
 			}
 		case widget.HighImportance:
 			// 连接中 已连接，再次点击断开连接，状态设置成未连接
-			btnConSetDefault(btnCon, liveHostOption)
+			btnConSetDefault(btnCon, liveHostOption, rLivePlatform, tLiveHostNo)
 			if liveHost != "dev" {
-				go webSocketClient.Stop()
+				switch livePlatform {
+				case "Douyu":
+					go webSocketClient.Stop()
+				case "Bilibili":
+					biliClient.Stop()
+					logger.Infof("disconnect %s", liveHost)
+				}
 			}
 		}
 		btnCon.Refresh()
@@ -357,7 +424,7 @@ func main() {
 	remarkText := widget.NewRichTextFromMarkdown(config.RemarkText)
 	remarkText.Wrapping = fyne.TextWrapBreak
 	remarkText.Resize(fyne.NewSize(540, 100))
-	remarkText.Move(fyne.NewPos(470, 14))
+	remarkText.Move(fyne.NewPos(560, 14))
 	elements = append(elements, remarkText)
 	go func() {
 		for {
@@ -432,11 +499,13 @@ func getRemoteRemark(url string) string {
 	return string(body)
 }
 
-func btnConSetDefault(btnCon *widget.Button, liveHostOption *widget.SelectEntry) {
+func btnConSetDefault(btnCon *widget.Button, liveHostOption *widget.SelectEntry, livePlatform *widget.RadioGroup, liveHostNo *canvas.Text) {
 	btnCon.Importance = widget.MediumImportance
 	btnCon.Text = "连接"
 	btnCon.Icon = theme.NavigateNextIcon()
 	liveHostOption.Show()
+	liveHostNo.Hide()
+	livePlatform.Enable()
 }
 
 func flashEle(times int, elements ...*canvas.Image) {
@@ -553,12 +622,11 @@ func refreshList() {
 
 func makeTray(a fyne.App) {
 	if desk, ok := a.(desktop.App); ok {
-		h := fyne.NewMenuItem("显示所有组件（开发用）", func() {})
-		h.Icon = theme.HomeIcon()
-		menu := fyne.NewMenu("Hello World", h)
-		h.Action = func() {
-			allWidgets(a, a.NewWindow("Widgets"))
-		}
+		resetLiveHostOptions := fyne.NewMenuItem("还原直播间下拉框", func() {
+			a.Preferences().SetString(PLiveHosts, "")
+			dialog.ShowInformation("提示", "已还原，重启生效", window)
+		})
+		menu := fyne.NewMenu("菜单", resetLiveHostOptions)
 		desk.SetSystemTrayMenu(menu)
 	}
 }

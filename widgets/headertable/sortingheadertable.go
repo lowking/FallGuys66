@@ -2,6 +2,7 @@ package headertable
 
 import (
 	"fmt"
+	"fyne.io/fyne/v2/data/binding"
 	"log"
 	"math"
 	"sort"
@@ -91,10 +92,10 @@ func stringSort(tableOpts *TableOpts, col int) SortFn {
 			}
 			convert := tableOpts.ColAttrs[col].Converter
 			if convert == nil {
-				convert = func(i interface{}) string { return fmt.Sprintf("%s", i) }
+				convert = func(i interface{}, row binding.Struct) string { return fmt.Sprintf("%s", i) }
 			}
-			str1 := convert(v1)
-			str2 := convert(v2)
+			str1 := convert(v1, b1)
+			str2 := convert(v2, b2)
 
 			if ascending {
 				return str1 < str2

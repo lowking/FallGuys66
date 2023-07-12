@@ -56,8 +56,8 @@ var listHeader = headertable.TableOpts{
 			DataStyle: headertable.CellStyle{
 				Alignment: fyne.TextAlignCenter,
 			},
-			WidthPercent: 120,
-			Converter: func(i interface{}) string {
+			WidthPercent: 150,
+			Converter: func(i interface{}, row binding.Struct) string {
 				return i.(string)
 			},
 		},
@@ -71,7 +71,7 @@ var listHeader = headertable.TableOpts{
 			DataStyle: headertable.CellStyle{
 				Alignment: fyne.TextAlignTrailing,
 			},
-			WidthPercent: 90,
+			WidthPercent: 100,
 		},
 		{
 			Name:   "Rid",
@@ -83,7 +83,14 @@ var listHeader = headertable.TableOpts{
 			DataStyle: headertable.CellStyle{
 				Alignment: fyne.TextAlignTrailing,
 			},
-			WidthPercent: 70,
+			WidthPercent: 121,
+			Converter: func(i interface{}, row binding.Struct) string {
+				t := i.(string)
+				if livePlatform, err := row.GetValue("LivePlatform"); err == nil && t != "" {
+					return fmt.Sprintf("%s (%v)", t, livePlatform)
+				}
+				return t
+			},
 		},
 		{
 			Name:   "Level",
@@ -108,7 +115,7 @@ var listHeader = headertable.TableOpts{
 				Alignment: fyne.TextAlignCenter,
 			},
 			WidthPercent: 40,
-			Converter: func(i interface{}) string {
+			Converter: func(i interface{}, row binding.Struct) string {
 				t := i.(string)
 				if t == "1" {
 					return "🎮"
@@ -128,7 +135,7 @@ var listHeader = headertable.TableOpts{
 				Alignment: fyne.TextAlignCenter,
 			},
 			WidthPercent: 40,
-			Converter: func(i interface{}) string {
+			Converter: func(i interface{}, row binding.Struct) string {
 				t := i.(string)
 				if t == "1" {
 					return "★"
@@ -162,7 +169,7 @@ var listHeader = headertable.TableOpts{
 				Alignment: fyne.TextAlignTrailing,
 			},
 			WidthPercent: 135,
-			Converter: func(i interface{}) string {
+			Converter: func(i interface{}, row binding.Struct) string {
 				t := i.(time.Time)
 				if t.IsZero() {
 					return ""
@@ -173,7 +180,7 @@ var listHeader = headertable.TableOpts{
 	},
 }
 
-func dmConvertor(i interface{}) string {
+func dmConvertor(i interface{}, row binding.Struct) string {
 	t := i.(string)
 	if isCleanMapId {
 		for _, mapId := range mapRe.FindAllString(t, -1) {
@@ -417,7 +424,7 @@ func refreshData(
 		cacheHt[key] = headertable.NewHeaderTable(&tListHeader)
 		firstItemAction := func() {
 			if s, err := bsCellTempString.Get(); err == nil {
-				window.Clipboard().SetContent(s)
+				window.Clipboard().SetContent(strings.Split(s, " ")[0])
 			}
 		}
 		firstMenuItem := fyne.NewMenuItem("", firstItemAction)
@@ -524,8 +531,13 @@ func refreshData(
 				valueString := ""
 				if s, ok := value.(string); ok {
 					valueString = s
-					if colKey == "Txt" {
-						valueString = dmConvertor(value)
+					switch colKey {
+					case "Txt":
+						valueString = dmConvertor(value, row)
+					case "Rid":
+						if livePlatform, err := row.GetValue("LivePlatform"); err == nil {
+							valueString = fmt.Sprintf("%s (%v)", valueString, livePlatform)
+						}
 					}
 				} else if s, ok := value.(time.Time); ok {
 					valueString = s.Format("2006-01-02 15:04:05")

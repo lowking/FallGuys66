@@ -6,7 +6,7 @@ import (
 )
 
 var AppName = "糖豆人直播助手：大周定制版"
-var AppSize = fyne.NewSize(1005, 860)
+var AppSize = fyne.NewSize(1105, 860)
 var LogoSize = float32(90)
 var Padding = float32(10)
 var ToolbarPaddingTop = Padding + 10
