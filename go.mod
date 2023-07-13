@@ -4,9 +4,12 @@ go 1.20
 
 require (
 	fyne.io/fyne/v2 v2.3.5
+	github.com/bitly/go-simplejson v0.5.0
 	github.com/go-vgo/robotgo v0.100.10
 	github.com/gorilla/websocket v1.5.0
+	github.com/sirodeneko/gobilibiliDanmu v0.0.0-20210506093710-58389c377ef2
 	github.com/stretchr/testify v1.8.1
+	github.com/viney-shih/go-lock v1.1.2
 	github.com/wesovilabs/koazee v0.0.5
 	golang.design/x/hotkey v0.4.1
 	golang.org/x/text v0.6.0
@@ -17,7 +20,6 @@ require (
 require (
 	fyne.io/systray v1.10.1-0.20230602210930-b6a2d6ca2a7b // indirect
 	github.com/StackExchange/wmi v1.2.1 // indirect
-	github.com/bitly/go-simplejson v0.5.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fredbi/uri v0.1.0 // indirect
 	github.com/fsnotify/fsnotify v1.5.4 // indirect
@@ -55,6 +57,7 @@ require (
 	golang.org/x/image v0.3.0 // indirect
 	golang.org/x/mobile v0.0.0-20211207041440-4e6c2922fdee // indirect
 	golang.org/x/net v0.0.0-20220722155237-a158d28d115b // indirect
+	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4 // indirect
 	golang.org/x/sys v0.0.0-20220722155257-8c9f86f7a55f // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	honnef.co/go/js/dom v0.0.0-20210725211120-f030747120f2 // indirect

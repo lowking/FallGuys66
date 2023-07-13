@@ -10,6 +10,8 @@ type SearchEntry struct {
 	OnKeyUp   func(event *fyne.KeyEvent)
 	OnKeyDown func(event *fyne.KeyEvent)
 	OnTapped  func(event *fyne.PointEvent)
+
+	PreviousCursorColumn int
 }
 
 type Tappable interface {

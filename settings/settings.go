@@ -54,6 +54,7 @@ type Settings struct {
 	AutoFillMapId bool
 	AutoConnect   bool
 	IsCleanMapId  bool
+	SelectedCell  bool
 	Window        *fyne.Window
 	Driver        *fyne.Driver
 

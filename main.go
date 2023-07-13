@@ -35,6 +35,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	lock "github.com/viney-shih/go-lock"
 )
 
 const preferenceCurrentTutorial = "currentTutorial"
@@ -50,6 +52,7 @@ var driver fyne.Driver
 var window fyne.Window
 var biliClient *gobilibili.BiliBiliClient
 var enableQueryLoop = true
+var searchLock = lock.NewCASMutex()
 
 func main() {
 	offsetX := float32(-50)
@@ -454,19 +457,33 @@ func generateSearchContainer() []fyne.CanvasObject {
 	keyWordEntry.Move(fyne.NewPos(config.ToolbarPaddingLeft, y))
 	idx := 4
 	keyWordEntry.OnSubmitted = func(_ string) {
-		time.Sleep(100 * time.Millisecond)
-		tabs.SelectIndex(idx)
-		go handler.RefreshMapList(setting, window, tabs, idx, keyWordEntry.Text, handler.WhereMap[idx], handler.OrderMap[idx], false, false)
+		go doSearch(idx, keyWordEntry)
+	}
+	keyWordEntry.OnCursorChanged = func() {
+		if keyWordEntry.CursorColumn == keyWordEntry.PreviousCursorColumn {
+			return
+		}
+		if setting.SelectedCell {
+			setting.SelectedCell = false
+		}
+		keyWordEntry.PreviousCursorColumn = keyWordEntry.CursorColumn
 	}
 	searchBtn := widget.NewButtonWithIcon("搜索", theme.SearchIcon(), func() {
-		tabs.SelectIndex(idx)
-		go handler.RefreshMapList(setting, window, tabs, idx, keyWordEntry.Text, handler.WhereMap[idx], handler.OrderMap[idx], false, false)
+		go doSearch(idx, keyWordEntry)
 	})
 	searchBtn.Resize(fyne.NewSize(90, height))
 	searchBtn.Move(fyne.NewPos(config.ToolbarPaddingLeft+keyWordEntry.Size().Width+config.Padding, y))
 
 	setting.OtherEntry["keyWordEntry"] = keyWordEntry
 	return []fyne.CanvasObject{keyWordEntry, searchBtn}
+}
+
+func doSearch(idx int, keyWordEntry *searchentry.SearchEntry) {
+	if !searchLock.TryLockWithTimeout(100 * time.Millisecond) {
+		return
+	}
+	defer searchLock.Unlock()
+	handler.RefreshMapList(setting, window, tabs, idx, keyWordEntry.Text, handler.WhereMap[idx], handler.OrderMap[idx], false, false)
 }
 
 func getRemoteRemark(url string) string {
@@ -610,6 +627,9 @@ func logLifecycle(a fyne.App) {
 }
 
 func refreshList() {
+	if setting.SelectedCell {
+		return
+	}
 	switch tabs.SelectedIndex() {
 	case 0:
 		go handler.RefreshMapList(setting, window, tabs, 0, "", handler.WhereMap[0], handler.OrderMap[0], false, false)

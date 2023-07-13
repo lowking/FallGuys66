@@ -237,6 +237,7 @@ var (
 var cache = make(map[string]string)
 var cacheHt = make(map[string]*headertable.HeaderTable)
 var cacheKeyword = ""
+var cacheKeywordForFoundCell = ""
 var cacheListHeader = make(map[string]headertable.TableOpts)
 var cacheCurrentNo = make(map[string]*int)
 var cachePager = make(map[string]*pager.Pager)
@@ -256,6 +257,11 @@ var listMap *[pageSize]model.MapInfo
 var tListMap = make(map[string][]model.MapInfo)
 var tBlacklist []model.Blacklist
 var whereString = "map_id like ? or nn like ? or uid like ? or rid like ? or txt like ?"
+var whereStringForList = []string{"MapId", "Nn", "Uid", "Rid", "Txt"}
+var allowTapManual = true
+var previousCellX = 0
+var previousCellY = 0
+var previousTabIndex = 0
 
 func RefreshMapList(
 	settings *settings.Settings,
@@ -268,13 +274,78 @@ func RefreshMapList(
 	recreate bool,
 	fromPager bool,
 ) {
+	// 重置一些参数
+	defer func() {
+		previousTabIndex = tabs.SelectedIndex()
+	}()
+	allowTapManual = true
+	settings.SelectedCell = false
 	key := fmt.Sprintf("map%d", idx)
 	if _, ok := cacheCurrentNo[key]; !ok {
 		no := 1
 		cacheCurrentNo[key] = &no
 	}
 	if keyWord != "" {
+		if cacheKeyword != keyWord {
+			if tabs.SelectedIndex() == 4 {
+				tabs.SelectIndex(0)
+				time.Sleep(200 * time.Millisecond)
+			}
+		}
 		cacheKeyword = keyWord
+		// 搜索当前列表，有的画就高亮，否则执行搜索
+		if previousCellX != -1 {
+			var i, j int
+			if cacheKeywordForFoundCell == keyWord && previousTabIndex == tabs.SelectedIndex() {
+				i = previousCellX
+				j = previousCellY + 1
+				if j >= len(listHeader.ColAttrs) {
+					i = previousCellX + 1
+					j = 0
+				}
+			}
+			table := cacheHt[fmt.Sprintf("map%d", tabs.SelectedIndex())]
+			// 每行数据开始搜索
+			isFound := false
+			for ; table != nil && i < len(table.TableOpts.Bindings); i++ {
+				bds := table.TableOpts.Bindings[i]
+				// 搜索指定列
+				for ; j < len(listHeader.ColAttrs); j++ {
+					colAttr := listHeader.ColAttrs[j]
+					// 定位到指定列
+					if !utils.In(whereStringForList, colAttr.Name) {
+						continue
+					}
+					// 获取列的值
+					if t, err := bds.GetValue(colAttr.Name); err == nil {
+						// 根据列的转换器处理文本
+						if colAttr.Converter != nil {
+							t = colAttr.Converter(t, bds)
+						}
+						// 列文本匹配搜索关键字
+						if strings.Index(t.(string), keyWord) == -1 {
+							continue
+						}
+						settings.SelectedCell = true
+						allowTapManual = false
+						previousCellX = i
+						previousCellY = j
+						isFound = true
+						flashCell(table, i, j)
+						allowTapManual = true
+						cacheKeywordForFoundCell = keyWord
+						return
+					}
+				}
+				j = 0
+			}
+			// 未在列表搜索到相关信息就返回，再次搜索才到数据库中查询
+			if !isFound && previousCellX != -1 {
+				previousCellX = -1
+				return
+			}
+		}
+		tabs.SelectIndex(idx)
 	}
 	// 查询数据库获取最新列表
 	isRefresh := false
@@ -328,6 +399,8 @@ func RefreshMapList(
 				isRefresh = true
 			}
 			tListMap[key], count = db.SearchMap(*cacheCurrentNo[key], pageSize, rWhere, order)
+			previousCellX = 0
+			previousCellY = 0
 		}
 	}
 	// 总页数变了就得刷新一次页码
@@ -341,7 +414,26 @@ func RefreshMapList(
 			(*cachePager[key].Items)[1].(*widget.Label).SetText(fmt.Sprintf("共 %d 条", count))
 		}
 	}
+	time.Sleep(100 * time.Millisecond)
 	refreshData(settings, window, tabs, idx, where, order, &recreate, count, fromPager)
+}
+
+func flashCell(table *headertable.HeaderTable, row int, col int) {
+	for i := 0; i < 2; i++ {
+		if i%2 == 0 {
+			table.Data.Select(widget.TableCellID{
+				Row: row,
+				Col: col,
+			})
+			time.Sleep(250 * time.Millisecond)
+		} else {
+			table.Data.Unselect(widget.TableCellID{
+				Row: row,
+				Col: col,
+			})
+			time.Sleep(50 * time.Millisecond)
+		}
+	}
 }
 
 func refreshData(
@@ -412,7 +504,9 @@ func refreshData(
 			if cacheHt[key].Data != nil {
 				cacheHt[key].Data.UnselectAll()
 			}
-			cacheHt[key].Refresh()
+			if !settings.SelectedCell {
+				cacheHt[key].Refresh()
+			}
 			logger.Infof("refresh finish, total: %v", len(tListMap[key]))
 			return
 		}
@@ -510,6 +604,12 @@ func refreshData(
 			cacheHt[key].Header.UnselectAll()
 		}
 		cacheHt[key].Data.OnSelected = func(id widget.TableCellID) {
+			// 如果搜索选中了的话，不触发搜索的select
+			if settings.SelectedCell && !allowTapManual {
+				return
+			}
+			settings.SelectedCell = false
+			allowTapManual = true
 			row := bindingsMap[key][id.Row]
 			colKey := tListHeader.ColAttrs[id.Col].Name
 			if value, err := row.GetValue(colKey); err == nil {
@@ -590,7 +690,7 @@ func refreshData(
 			cacheHt[key].Data.UnselectAll()
 		}
 		tapped := func(pageNo int) {
-			RefreshMapList(settings, window, tabs, idx, cacheKeyword, WhereMap[idx], OrderMap[idx], false, true)
+			RefreshMapList(settings, window, tabs, idx, "", WhereMap[idx], OrderMap[idx], false, true)
 		}
 		listPager := pager.NewPager(cacheCurrentNo[key], pPageSize, &count, &tapped)
 		cachePager[key] = listPager
