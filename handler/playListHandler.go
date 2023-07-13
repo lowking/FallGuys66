@@ -690,6 +690,7 @@ func refreshData(
 			cacheHt[key].Data.UnselectAll()
 		}
 		tapped := func(pageNo int) {
+			previousCellX = 0
 			RefreshMapList(settings, window, tabs, idx, "", WhereMap[idx], OrderMap[idx], false, true)
 		}
 		listPager := pager.NewPager(cacheCurrentNo[key], pPageSize, &count, &tapped)
