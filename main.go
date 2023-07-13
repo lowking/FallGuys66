@@ -47,7 +47,7 @@ const PLivePlatform = "PLivePlatform"
 var topWindow fyne.Window
 var tabs *container.AppTabs
 var setting *settings.Settings
-var version = "1.6.1"
+var version = "1.6.4"
 var driver fyne.Driver
 var window fyne.Window
 var biliClient *gobilibili.BiliBiliClient

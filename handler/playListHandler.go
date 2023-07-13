@@ -286,7 +286,9 @@ func RefreshMapList(
 		cacheCurrentNo[key] = &no
 	}
 	if keyWord != "" {
+		keyWord = strings.ToLower(keyWord)
 		if cacheKeyword != keyWord {
+			previousCellX = 0
 			if tabs.SelectedIndex() == 4 {
 				tabs.SelectIndex(0)
 				time.Sleep(200 * time.Millisecond)
@@ -323,7 +325,7 @@ func RefreshMapList(
 							t = colAttr.Converter(t, bds)
 						}
 						// 列文本匹配搜索关键字
-						if strings.Index(t.(string), keyWord) == -1 {
+						if strings.Index(strings.ToLower(t.(string)), keyWord) == -1 {
 							continue
 						}
 						settings.SelectedCell = true
