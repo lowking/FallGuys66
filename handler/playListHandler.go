@@ -526,6 +526,7 @@ func refreshData(
 		firstMenuItem := fyne.NewMenuItem("", firstItemAction)
 		playMenuItem := fyne.NewMenuItem("游玩", func() {
 			if s, err := bsMapInfoTemp.GetValue("MapId"); err == nil {
+				previousCellX = -1
 				window.Clipboard().SetContent(s.(string))
 				go utils.FillMapId(s.(string), settings)
 				go func() {
@@ -538,6 +539,7 @@ func refreshData(
 			}
 		})
 		blockMenuItem := fyne.NewMenuItem("拉黑", func() {
+			previousCellX = -1
 			var uid, nn string
 			var err error
 			var s interface{}
@@ -558,6 +560,7 @@ func refreshData(
 			}
 		})
 		releaseMenuItem := fyne.NewMenuItem("取消拉黑", func() {
+			previousCellX = -1
 			var uid, nn string
 			var err error
 			var s interface{}
@@ -577,6 +580,7 @@ func refreshData(
 		})
 		starMenuItem := fyne.NewMenuItem("收藏", func() {
 			if s, err := bsMapInfoTemp.GetValue("MapId"); err == nil {
+				previousCellX = -1
 				window.Clipboard().SetContent(s.(string))
 				go utils.FillMapId(s.(string), settings)
 				go func() {
@@ -590,6 +594,7 @@ func refreshData(
 		})
 		unStarMenuItem := fyne.NewMenuItem("取消收藏", func() {
 			if s, err := bsMapInfoTemp.GetValue("MapId"); err == nil {
+				previousCellX = -1
 				window.Clipboard().SetContent(s.(string))
 				go utils.FillMapId(s.(string), settings)
 				go func() {
