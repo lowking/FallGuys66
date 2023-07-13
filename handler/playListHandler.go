@@ -289,12 +289,7 @@ func RefreshMapList(
 		keyWord = strings.ToLower(keyWord)
 		if cacheKeyword != keyWord {
 			previousCellX = 0
-			if tabs.SelectedIndex() == 4 {
-				tabs.SelectIndex(0)
-				time.Sleep(200 * time.Millisecond)
-			}
 		}
-		cacheKeyword = keyWord
 		// 搜索当前列表，有的画就高亮，否则执行搜索
 		if previousCellX != -1 {
 			var i, j int
@@ -307,8 +302,12 @@ func RefreshMapList(
 				}
 			}
 			table := cacheHt[fmt.Sprintf("map%d", tabs.SelectedIndex())]
+			if tabs.SelectedIndex() == 4 {
+				table = cacheHt[fmt.Sprintf("map%d", 0)]
+			}
 			// 每行数据开始搜索
 			isFound := false
+			logger.Debugf("i: %d, j: %d", i, j)
 			for ; table != nil && i < len(table.TableOpts.Bindings); i++ {
 				bds := table.TableOpts.Bindings[i]
 				// 搜索指定列
@@ -328,6 +327,10 @@ func RefreshMapList(
 						if strings.Index(strings.ToLower(t.(string)), keyWord) == -1 {
 							continue
 						}
+						if tabs.SelectedIndex() == 4 {
+							tabs.SelectIndex(0)
+							time.Sleep(200 * time.Millisecond)
+						}
 						settings.SelectedCell = true
 						allowTapManual = false
 						previousCellX = i
@@ -336,17 +339,22 @@ func RefreshMapList(
 						flashCell(table, i, j)
 						allowTapManual = true
 						cacheKeywordForFoundCell = keyWord
+						cacheKeyword = keyWord
 						return
 					}
 				}
 				j = 0
 			}
+			cacheKeyword = keyWord
 			// 未在列表搜索到相关信息就返回，再次搜索才到数据库中查询
 			if !isFound && previousCellX != -1 {
-				previousCellX = -1
-				return
+				if tabs.SelectedIndex() != 4 {
+					previousCellX = -1
+					return
+				}
 			}
 		}
+		cacheKeyword = keyWord
 		tabs.SelectIndex(idx)
 	}
 	// 查询数据库获取最新列表
