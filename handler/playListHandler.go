@@ -42,7 +42,7 @@ var listHeader = headertable.TableOpts{
 				TextStyle: fyne.TextStyle{Bold: true},
 			},
 			DataStyle: headertable.CellStyle{
-				Alignment: fyne.TextAlignLeading,
+				Alignment: fyne.TextAlignCenter,
 			},
 			WidthPercent: 120,
 		},
@@ -56,8 +56,11 @@ var listHeader = headertable.TableOpts{
 			DataStyle: headertable.CellStyle{
 				Alignment: fyne.TextAlignCenter,
 			},
-			WidthPercent: 150,
+			WidthPercent: 195,
 			Converter: func(i interface{}, row binding.Struct) string {
+				if level, err := row.GetValue("Level"); err == nil && level != "" {
+					return fmt.Sprintf("%s (Lv. %v)", i.(string), level)
+				}
 				return i.(string)
 			},
 		},
@@ -91,18 +94,6 @@ var listHeader = headertable.TableOpts{
 				}
 				return t
 			},
-		},
-		{
-			Name:   "Level",
-			Header: "等级",
-			HeaderStyle: headertable.CellStyle{
-				Alignment: fyne.TextAlignCenter,
-				TextStyle: fyne.TextStyle{Bold: true},
-			},
-			DataStyle: headertable.CellStyle{
-				Alignment: fyne.TextAlignTrailing,
-			},
-			WidthPercent: 40,
 		},
 		{
 			Name:   "State",
@@ -307,7 +298,6 @@ func RefreshMapList(
 			}
 			// 每行数据开始搜索
 			isFound := false
-			logger.Debugf("i: %d, j: %d", i, j)
 			for ; table != nil && i < len(table.TableOpts.Bindings); i++ {
 				bds := table.TableOpts.Bindings[i]
 				// 搜索指定列
@@ -472,8 +462,8 @@ func refreshData(
 			tListHeader := listHeader
 			tListHeader.ColAttrs = make([]headertable.ColAttr, len(listHeader.ColAttrs))
 			copy(tListHeader.ColAttrs, listHeader.ColAttrs)
-			tListHeader.ColAttrs[8].Name = "PlayTime"
-			tListHeader.ColAttrs[8].Header = "玩游时间"
+			tListHeader.ColAttrs[7].Name = "PlayTime"
+			tListHeader.ColAttrs[7].Header = "游玩时间"
 			cacheListHeader[key] = tListHeader
 		}
 	case 2:
@@ -643,19 +633,12 @@ func refreshData(
 					_ = bsMapInfoTemp.SetValue("Nn", nn.(string))
 				}
 				// 处理单元格字符
+				converter := tListHeader.ColAttrs[id.Col].Converter
 				valueString := ""
-				if s, ok := value.(string); ok {
-					valueString = s
-					switch colKey {
-					case "Txt":
-						valueString = dmConvertor(value, row)
-					case "Rid":
-						if livePlatform, err := row.GetValue("LivePlatform"); err == nil {
-							valueString = fmt.Sprintf("%s (%v)", valueString, livePlatform)
-						}
-					}
-				} else if s, ok := value.(time.Time); ok {
-					valueString = s.Format("2006-01-02 15:04:05")
+				if converter != nil {
+					valueString = converter(value, row)
+				} else {
+					valueString = value.(string)
 				}
 
 				star, _ := row.GetValue("Star")
@@ -699,7 +682,17 @@ func refreshData(
 
 				_ = bsCellTempString.Set(valueString)
 
-				xx, yy := getCellPos(fyne.NewPos(0, 220), id.Col, id.Row, tListHeader, 36.1)
+				if valueString == "" {
+					_, streamOf := koazee.StreamOf(tableMenu.Items).Pop()
+					out, _ := streamOf.Sort(func(a, b *fyne.MenuItem) int {
+						if len(a.Label) > len(b.Label) {
+							return -1
+						}
+						return 1
+					}).Pop()
+					valueString = out.Val().(*fyne.MenuItem).Label
+				}
+				xx, yy := getCellPos(fyne.NewPos(0, 220), id.Col, id.Row, tListHeader, cacheHt[key].RefWidth, 36.1, valueString)
 				widget.NewPopUpMenu(tableMenu, window.Canvas()).ShowAtPosition(fyne.NewPos(xx, yy))
 			}
 			cacheHt[key].Data.UnselectAll()
@@ -743,12 +736,24 @@ func addOrDeleteMenuItem(tableMenu *fyne.Menu, deleteTargetItem *fyne.MenuItem, 
 	}
 }
 
-func getCellPos(base fyne.Position, x int, y int, header headertable.TableOpts, cellHeight float32) (float32, float32) {
+func getCellPos(base fyne.Position, x int, y int, header headertable.TableOpts, refWidth float32, cellHeight float32, valueString string) (float32, float32) {
 	xx := base.X
 	yy := base.Y
-	for i := 0; i < x; i++ {
-		xx += float32(header.ColAttrs[i].WidthPercent) + 15
+	for i := 0; i <= x; i++ {
+		if i == x {
+			cellTextWidth := widget.NewLabel(valueString).MinSize().Width
+			switch header.ColAttrs[i].DataStyle.Alignment {
+			case fyne.TextAlignLeading:
+				// xx += float32(header.ColAttrs[i].WidthPercent)/100*refWidth + 6
+			case fyne.TextAlignCenter:
+				xx += (float32(header.ColAttrs[i].WidthPercent)/100*refWidth - cellTextWidth) / 2
+			case fyne.TextAlignTrailing:
+				xx += float32(header.ColAttrs[i].WidthPercent)/100*refWidth - cellTextWidth
+			}
+		} else {
+			xx += float32(header.ColAttrs[i].WidthPercent)/100*refWidth + 6
+		}
 	}
 
-	return xx + 15, yy + (float32(y)+0.7)*cellHeight
+	return xx, yy + (float32(y)+0.7)*cellHeight - cellHeight
 }

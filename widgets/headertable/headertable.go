@@ -16,6 +16,8 @@ type HeaderTable struct {
 	TableOpts *TableOpts
 	Header    *widget.Table
 	Data      *widget.Table
+
+	RefWidth float32
 }
 
 type BindingConverter func(interface{}, binding.Struct) string
@@ -44,6 +46,7 @@ func NewHeaderTable(tableOpts *TableOpts) *HeaderTable {
 
 	// Set Column widths
 	refWidth := widget.NewLabel(t.TableOpts.RefWidth).MinSize().Width
+	t.RefWidth = refWidth
 	for i, colAttr := range t.TableOpts.ColAttrs {
 		if t.Data != nil {
 			t.Data.SetColumnWidth(i, float32(colAttr.WidthPercent)/100.0*refWidth)

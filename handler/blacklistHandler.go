@@ -15,6 +15,7 @@ import (
 	"fyne.io/fyne/v2/data/binding"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/widget"
+	"github.com/wesovilabs/koazee"
 	"time"
 )
 
@@ -161,17 +162,28 @@ func refreshBlacklistData(
 					_ = bsMapInfoTemp.SetValue("Nn", nn.(string))
 				}
 				// 处理单元格字符
+				converter := tListHeader.ColAttrs[id.Col].Converter
 				valueString := ""
-				if s, ok := value.(string); ok {
-					valueString = s
-				} else if s, ok := value.(time.Time); ok {
-					valueString = s.Format("2006-01-02 15:04:05")
+				if converter != nil {
+					valueString = converter(value, row)
+				} else {
+					valueString = value.(string)
 				}
 				tableMenu.Items[0].Label = valueString
 				_ = bsCellTempString.Set(valueString)
 
-				xx, yy := getCellPos(fyne.NewPos(0, 220), id.Col, id.Row, tListHeader, 36.1)
-				widget.NewPopUpMenu(tableMenu, window.Canvas()).ShowAtPosition(fyne.NewPos(xx+float32(tListHeader.ColAttrs[id.Col].WidthPercent/2), yy))
+				if valueString == "" {
+					_, streamOf := koazee.StreamOf(tableMenu.Items).Pop()
+					out, _ := streamOf.Sort(func(a, b *fyne.MenuItem) int {
+						if len(a.Label) > len(b.Label) {
+							return -1
+						}
+						return 1
+					}).Pop()
+					valueString = out.Val().(*fyne.MenuItem).Label
+				}
+				xx, yy := getCellPos(fyne.NewPos(0, 220), id.Col, id.Row, tListHeader, cacheHt[key].RefWidth, 36.1, valueString)
+				widget.NewPopUpMenu(tableMenu, window.Canvas()).ShowAtPosition(fyne.NewPos(xx, yy))
 			}
 			cacheHt[key].Data.UnselectAll()
 		}
