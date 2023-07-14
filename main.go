@@ -600,11 +600,16 @@ func logLifecycle(a fyne.App) {
 	a.Lifecycle().SetOnStopped(func() {
 		log.Println("Lifecycle: Stopped")
 	})
+	refreshLock := lock.NewCASMutex()
 	a.Lifecycle().SetOnEnteredForeground(func() {
 		log.Println("Lifecycle: Entered Foreground")
 		if tabs.SelectedIndex() >= 3 {
 			return
 		}
+		if !refreshLock.TryLockWithTimeout(100 * time.Millisecond) {
+			return
+		}
+		defer refreshLock.Unlock()
 		// 每次聚焦窗口刷新列表
 		refreshList()
 
