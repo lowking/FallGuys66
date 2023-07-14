@@ -686,7 +686,7 @@ func refreshData(
 
 				_ = bsCellTempString.Set(valueString)
 
-				if valueString == "" {
+				if valueString == "" || valueString == "★" || valueString == "🎮" {
 					_, streamOf := koazee.StreamOf(tableMenu.Items).Pop()
 					out, _ := streamOf.Sort(func(a, b *fyne.MenuItem) int {
 						if len(a.Label) > len(b.Label) {
