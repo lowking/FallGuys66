@@ -147,6 +147,12 @@ func refreshBlacklistData(
 			cacheHt[key].Header.UnselectAll()
 		}
 		cacheHt[key].Data.OnSelected = func(id widget.TableCellID) {
+			// 如果搜索选中了的话，不触发搜索的select
+			if settings.SelectedCell && !allowTapManual {
+				return
+			}
+			settings.SelectedCell = false
+			allowTapManual = true
 			row := bindingsMap[key][id.Row]
 			colKey := tListHeader.ColAttrs[id.Col].Name
 			if value, err := row.GetValue(colKey); err == nil {
