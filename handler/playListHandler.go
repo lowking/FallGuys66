@@ -292,17 +292,21 @@ func RefreshMapList(
 					j = 0
 				}
 			}
-			table := cacheHt[fmt.Sprintf("map%d", tabs.SelectedIndex())]
+			findCellKey := fmt.Sprintf("map%d", tabs.SelectedIndex())
+			table := cacheHt[findCellKey]
+			header := cacheListHeader[findCellKey]
 			if tabs.SelectedIndex() == 4 {
-				table = cacheHt[fmt.Sprintf("map%d", 0)]
+				tFindCellKey := fmt.Sprintf("map%d", 0)
+				table = cacheHt[tFindCellKey]
+				header = cacheListHeader[tFindCellKey]
 			}
 			// 每行数据开始搜索
 			isFound := false
 			for ; table != nil && i < len(table.TableOpts.Bindings); i++ {
 				bds := table.TableOpts.Bindings[i]
 				// 搜索指定列
-				for ; j < len(listHeader.ColAttrs); j++ {
-					colAttr := listHeader.ColAttrs[j]
+				for ; j < len(header.ColAttrs); j++ {
+					colAttr := header.ColAttrs[j]
 					// 定位到指定列
 					if !utils.In(whereStringForList, colAttr.Name) {
 						continue
