@@ -711,6 +711,7 @@ func refreshData(
 		tabs.Items[idx].Content = cBorder
 	} else {
 		cache[recreateKey] = "true"
+		cachePager[key] = nil
 		tabs.Items[idx].Content = utils.MakeEmptyList(config.AccentColor)
 	}
 }
