@@ -52,6 +52,7 @@ var driver fyne.Driver
 var window fyne.Window
 var biliClient *gobilibili.BiliBiliClient
 var enableQueryLoop = true
+var connectLock = lock.NewCASMutex()
 var searchLock = lock.NewCASMutex()
 
 func main() {
@@ -227,12 +228,11 @@ func main() {
 	// 连接直播间按钮
 	var webSocketClient client.DyBarrageWebSocketClient
 	var btnCon *widget.Button
-	var lock sync.Mutex
 	btnCon = widget.NewButtonWithIcon("连接", theme.NavigateNextIcon(), func() {
-		if !lock.TryLock() {
+		if !connectLock.TryLockWithTimeout(100 * time.Millisecond) {
 			return
 		}
-		defer lock.Unlock()
+		defer connectLock.Unlock()
 		if liveHost == "" {
 			btnConSetDefault(btnCon, liveHostOption, rLivePlatform, tLiveHostNo)
 			dialog.ShowInformation("提示", "请填写直播间号", window)
