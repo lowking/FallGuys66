@@ -79,6 +79,7 @@ func NewSettings() *Settings {
 }
 
 func (s *Settings) Init(window *fyne.Window, driver *fyne.Driver) *container.AppTabs {
+	logger.Info("Initializing setting panel ...")
 	s.Window = window
 	s.Driver = driver
 	b := false
@@ -101,6 +102,7 @@ func (s *Settings) Init(window *fyne.Window, driver *fyne.Driver) *container.App
 }
 
 func (s *Settings) GenCommonSettings() *fyne.Container {
+	logger.Info("Initializing common setting ...")
 	app := fyne.CurrentApp()
 	y := config.Padding
 	startupLabel := widget.NewLabel("启动时")
@@ -203,6 +205,7 @@ func (s *Settings) GenCommonSettings() *fyne.Container {
 }
 
 func (s *Settings) GenFgSettings() *fyne.Container {
+	logger.Info("Initializing fallguys setting ...")
 	// 糖豆人进程获取设置
 	s.genGetFgPidSettingsRow()
 	// 糖豆人自动点击坐标设置

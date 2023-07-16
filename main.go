@@ -108,15 +108,16 @@ func main() {
 
 	// 需要渲染的元素
 	var elements []fyne.CanvasObject
+	logger.Info("Loading background ...")
 	bg := canvas.NewImageFromResource(data.Bg)
 	bgHeight := cLogo.Size().Height + config.Padding*3 + offset + 60
-	logger.Debugf("bg height: %v", bgHeight)
 	bg.Resize(fyne.NewSize(config.AppSize.Width, bgHeight))
 	bg.Move(fyne.NewPos(offset, offset))
 	elements = append(elements, bg)
 	elements = append(elements, cLogo)
 
 	// 直播间label
+	logger.Info("Initializing live host label ...")
 	lLiveHostLabel := canvas.NewText("直播间：", theme.PrimaryColor())
 	lLiveHostShadowLabel := canvas.NewText("直播间：", config.ShadowColor)
 	lLiveHostLabel.TextSize = 35
@@ -128,6 +129,7 @@ func main() {
 
 	optionSize := fyne.NewSize(140, 37)
 	// 直播间输入框
+	logger.Info("Initializing live host number label ...")
 	defaultLiveHostNo := application.Preferences().StringWithFallback(PDefaultLiveHostNo, "")
 	tLiveHostNo := canvas.NewText(defaultLiveHostNo, color.RGBA{
 		R: 106,
@@ -146,6 +148,7 @@ func main() {
 	if pLiveHosts != "" {
 		liveHosts = strings.Split(pLiveHosts, "|")
 	}
+	logger.Info("Initializing live host selector ...")
 	// bindLiveHosts := binding.BindStringList(&liveHosts)
 	liveHostOption := widget.NewSelectEntry(liveHosts)
 	liveHostOption.TextStyle.Bold = true
@@ -161,6 +164,7 @@ func main() {
 	elements = append(elements, cLiveHostOption)
 
 	// 初始化平台选项
+	logger.Info("Initializing live platform radio ...")
 	livePlatformOptions := []string{"Douyu", "Bilibili"}
 	livePlatform := application.Preferences().StringWithFallback(PLivePlatform, "Douyu")
 	rLivePlatform := widget.NewRadioGroup(livePlatformOptions, func(p string) {
@@ -172,6 +176,7 @@ func main() {
 	elements = append(elements, rLivePlatform)
 
 	// 初始化copyright
+	logger.Info("Initializing copyright info ...")
 	lCopyrightL := canvas.NewText("斗鱼ID：石疯悦耳", color.RGBA{
 		R: 32,
 		G: 32,
@@ -195,6 +200,7 @@ func main() {
 	elements = append(elements, lCopyrightL)
 	elements = append(elements, lCopyrightR)
 
+	logger.Info("Initializing table stuff ...")
 	var toggleElements []fyne.CanvasObject
 	// 给列表行添加背景
 	rowHeight := float32(36.2)
@@ -220,6 +226,7 @@ func main() {
 	elements = append(elements, toggleElements...)
 
 	// 初始化tab列表
+	logger.Info("Initializing tab list ...")
 	setting = settings.NewSettings()
 	tabs = container.NewAppTabs(
 		container.NewTabItem("未玩列表", utils.MakeEmptyList(theme.PrimaryColor())),
@@ -259,6 +266,7 @@ func main() {
 	elements = append(elements, cTabList)
 
 	// 连接直播间按钮
+	logger.Info("Initializing connect button ...")
 	var webSocketClient client.DyBarrageWebSocketClient
 	var btnCon *widget.Button
 	btnCon = widget.NewButtonWithIcon("连接", theme.NavigateNextIcon(), func() {
@@ -446,6 +454,7 @@ func main() {
 	elements = append(elements, cBtnCon)
 
 	// 版本信息
+	logger.Info("Initializing version info ...")
 	versionText := canvas.NewText(fmt.Sprintf("v%s", version), config.VersionColor)
 	versionText.TextSize = 14
 	versionText.Alignment = fyne.TextAlignTrailing
@@ -453,10 +462,12 @@ func main() {
 	elements = append(elements, versionText)
 
 	// 搜索相关
+	logger.Info("Initializing search stuff ...")
 	searchEles := generateSearchContainer()
 	elements = append(elements, searchEles...)
 
 	// 说明，从远程获取
+	logger.Info("Initializing remark ...")
 	remarkText := widget.NewRichTextFromMarkdown(config.RemarkText)
 	remarkText.Wrapping = fyne.TextWrapBreak
 	remarkText.Resize(fyne.NewSize(540, 100))
