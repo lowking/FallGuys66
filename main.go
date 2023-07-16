@@ -33,7 +33,6 @@ import (
 	"runtime/debug"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	lock "github.com/viney-shih/go-lock"
@@ -118,7 +117,7 @@ func main() {
 	elements = append(elements, cLogo)
 
 	// 直播间label
-	lLiveHostLabel := canvas.NewText("直播间：", config.AccentColor)
+	lLiveHostLabel := canvas.NewText("直播间：", theme.PrimaryColor())
 	lLiveHostShadowLabel := canvas.NewText("直播间：", config.ShadowColor)
 	lLiveHostLabel.TextSize = 35
 	lLiveHostShadowLabel.TextSize = 35
@@ -196,17 +195,42 @@ func main() {
 	elements = append(elements, lCopyrightL)
 	elements = append(elements, lCopyrightR)
 
+	var toggleElements []fyne.CanvasObject
+	// 给列表行添加背景
+	rowHeight := float32(36.2)
+	startY := cLogo.Size().Height + 137
+	for i := float32(0); i+2 < (config.AppSize.Height-startY)/rowHeight; i += 2 {
+		tableRowLine := canvas.NewRectangle(theme.HoverColor())
+		tableRowLine.Resize(fyne.NewSize(config.AppSize.Width+10, rowHeight))
+		tableRowLine.Move(fyne.NewPos(-10, startY+rowHeight*i))
+		toggleElements = append(toggleElements, tableRowLine)
+	}
+
+	// 直线分割表头
+	tableHeaderLine := canvas.NewRectangle(theme.ShadowColor())
+	tableHeaderLine.Resize(fyne.NewSize(config.AppSize.Width+20, 6))
+	tableHeaderLine.Move(fyne.NewPos(-10, cLogo.Size().Height+98))
+	toggleElements = append(toggleElements, tableHeaderLine)
+	tableFooterLine := canvas.NewRectangle(theme.ShadowColor())
+	tableFooterLine.Resize(fyne.NewSize(config.AppSize.Width+20, 6))
+	tableFooterLine.Move(fyne.NewPos(-10, cLogo.Size().Height+98))
+	tableFooterLine.Move(fyne.NewPos(-10, config.AppSize.Height-47))
+	toggleElements = append(toggleElements, tableFooterLine)
+
+	elements = append(elements, toggleElements...)
+
 	// 初始化tab列表
 	setting = settings.NewSettings()
 	tabs = container.NewAppTabs(
-		container.NewTabItem("未玩列表", utils.MakeEmptyList(config.AccentColor)),
-		container.NewTabItem("已玩列表", utils.MakeEmptyList(config.AccentColor)),
-		container.NewTabItem("收藏列表", utils.MakeEmptyList(config.AccentColor)),
-		container.NewTabItem("黑名单", utils.MakeEmptyList(config.AccentColor)),
-		container.NewTabItem("搜索结果", utils.MakeEmptyList(config.AccentColor)),
+		container.NewTabItem("未玩列表", utils.MakeEmptyList(theme.PrimaryColor())),
+		container.NewTabItem("已玩列表", utils.MakeEmptyList(theme.PrimaryColor())),
+		container.NewTabItem("收藏列表", utils.MakeEmptyList(theme.PrimaryColor())),
+		container.NewTabItem("黑名单", utils.MakeEmptyList(theme.PrimaryColor())),
+		container.NewTabItem("搜索结果", utils.MakeEmptyList(theme.PrimaryColor())),
 		container.NewTabItem("设置", setting.Init(&window, &driver)),
 	)
 	tabs.OnSelected = func(item *container.TabItem) {
+		toggleElementsVisible := true
 		switch item.Text {
 		case "未玩列表":
 			go handler.RefreshMapList(setting, window, tabs, 0, "", handler.WhereMap[0], handler.OrderMap[0], false, false)
@@ -218,6 +242,15 @@ func main() {
 			go handler.RefreshMapList(setting, window, tabs, 3, "", handler.WhereMap[3], handler.OrderMap[3], false, false)
 		case "搜索结果":
 			go handler.RefreshMapList(setting, window, tabs, 4, "", handler.WhereMap[4], handler.OrderMap[4], false, false)
+		default:
+			toggleElementsVisible = false
+		}
+		for _, element := range toggleElements {
+			if toggleElementsVisible {
+				element.Show()
+			} else {
+				element.Hide()
+			}
 		}
 	}
 	cTabList := container.NewBorder(nil, nil, nil, nil, tabs)

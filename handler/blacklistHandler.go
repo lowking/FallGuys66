@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"FallGuys66/config"
 	"FallGuys66/db"
 	"FallGuys66/db/model"
 	"FallGuys66/live/douyu/lib/logger"
@@ -14,6 +13,7 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/data/binding"
 	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/wesovilabs/koazee"
 	"time"
@@ -202,6 +202,6 @@ func refreshBlacklistData(
 		tabs.Items[idx].Content = cBorder
 	} else {
 		cache[recreateKey] = "true"
-		tabs.Items[idx].Content = utils.MakeEmptyList(config.AccentColor)
+		tabs.Items[idx].Content = utils.MakeEmptyList(theme.PrimaryColor())
 	}
 }

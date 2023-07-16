@@ -45,7 +45,7 @@ func DeleteSlice(slice interface{}, index int) (interface{}, error) {
 	return nil, errors.New("error")
 }
 
-func MakeEmptyList(accentColor color.RGBA) *fyne.Container {
+func MakeEmptyList(accentColor color.Color) *fyne.Container {
 	text := canvas.NewText("无数据 ...", accentColor)
 	text.TextSize = 20
 	cEmpty := container.NewCenter(text)

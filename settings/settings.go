@@ -225,7 +225,7 @@ func (s *Settings) genGetFgPidSettingsRow() {
 	s.fgSettingItems = append(s.fgSettingItems, cCbAutoFillMapId)
 
 	y += lineHeight
-	infoLabel := canvas.NewText(`‼️ 如果自动获取不可用，请打开任务管理器查看并粘贴糖豆人进程ID（Pid）`, config.AccentColor)
+	infoLabel := canvas.NewText(`‼️ 如果自动获取不可用，请打开任务管理器查看并粘贴糖豆人进程ID（Pid）`, theme.PrimaryColor())
 	infoLabel.Move(fyne.NewPos(config.Padding, y))
 	s.fgSettingItems = append(s.fgSettingItems, infoLabel)
 
@@ -312,7 +312,7 @@ func (s *Settings) genGetFgPidSettingsRow() {
 func (s *Settings) genFgAutoClickSettingsRow() {
 	app := fyne.CurrentApp()
 	y := lineHeight*2.5 + config.Padding
-	infoLabel := canvas.NewText(`‼️ 按照"123,123"格式在下方填写对应坐标（截图软件可以定位坐标），然后点击"测试点击"按钮调整坐标，保证能够正确点击相应按钮即可`, config.AccentColor)
+	infoLabel := canvas.NewText(`‼️ 按照"123,123"格式在下方填写对应坐标（截图软件可以定位坐标），然后点击"测试点击"按钮调整坐标，保证能够正确点击相应按钮即可`, theme.PrimaryColor())
 	infoLabel.Move(fyne.NewPos(config.Padding, y))
 	s.fgSettingItems = append(s.fgSettingItems, infoLabel)
 
@@ -486,7 +486,7 @@ func (s *Settings) genFgAutoClickSettingsRow() {
 	}
 	playNextHotKeyStr := app.Preferences().StringWithFallback(PHotKeyPlayNext, "")
 	playNext(playNextHotKeyStr)
-	s.genEntryWithLink(objects[1:], fmt.Sprintf("例：ctrl+%s+n，回车保存", s.altName), 170, 35, playNext, 2, playNextHotKeyStr)
+	s.genEntryWithLink(objects[1:], fmt.Sprintf("例：ctrl+%s+n，回车保存", s.altName), 150, 35, 5, playNext, 2, playNextHotKeyStr)
 	playNextOnSelectShow := func(str string) {
 		keys := strings.Split(str, "+")
 		if !s.shortcutChecker(keys, s.isNotify, 3) {
@@ -514,7 +514,7 @@ func (s *Settings) genFgAutoClickSettingsRow() {
 	playNextOnSelectShowHotKeyStr := app.Preferences().StringWithFallback(PHotKeyPlayNextOnSelectShow, "")
 	playNextOnSelectShow(playNextOnSelectShowHotKeyStr)
 	// playNext(playNextOnSelectShowHotKeyStr)
-	s.genEntryWithLink(objects, fmt.Sprintf("例：ctrl+%s+p，回车保存", s.altName), 170, 35, playNextOnSelectShow, 1, playNextOnSelectShowHotKeyStr)
+	s.genEntryWithLink(objects, fmt.Sprintf("例：ctrl+%s+p，回车保存", s.altName), 150, 35, 5, playNextOnSelectShow, 1, playNextOnSelectShowHotKeyStr)
 	go func() {
 		time.Sleep(2 * time.Second)
 		*s.isNotify = true
@@ -561,18 +561,27 @@ func (s *Settings) registerHotKey(modifiers []hotkey.Modifier, key hotkey.Key, o
 	}
 }
 
-func (s *Settings) genEntryWithLink(objects []fyne.CanvasObject, placeHolder string, width float32, height float32, onSubmit func(s string), lineNo float32, defaultValue string) {
+func (s *Settings) genEntryWithLink(
+	objects []fyne.CanvasObject,
+	placeHolder string,
+	width float32,
+	height float32,
+	padding float32,
+	onSubmit func(s string),
+	lineNo float32,
+	defaultValue string,
+) {
 	// 根据objects计算连线起点坐标
-	linkStartEndpoint := canvas.NewRectangle(config.ShadowColor)
-	linkStartEndpoint.Resize(fyne.NewSize(5, height*lineNo))
+	linkStartEndpoint := canvas.NewRectangle(theme.HoverColor())
+	linkStartEndpoint.Resize(fyne.NewSize(5, (height+padding)*lineNo))
 	linkStartEndpoint.Move(fyne.NewPos(objects[0].Position().X+objects[0].Size().Width/2, objects[0].Position().Y+objects[0].Size().Height))
 	s.fgSettingItems = append(s.fgSettingItems, linkStartEndpoint)
-	linkEndEndpoint := canvas.NewRectangle(config.ShadowColor)
-	linkEndEndpoint.Resize(fyne.NewSize(5, height*lineNo))
+	linkEndEndpoint := canvas.NewRectangle(theme.HoverColor())
+	linkEndEndpoint.Resize(fyne.NewSize(5, (height+padding)*lineNo))
 	linkEndEndpoint.Move(fyne.NewPos(objects[len(objects)-1].Position().X+objects[len(objects)-1].Size().Width/2, objects[len(objects)-1].Position().Y+objects[len(objects)-1].Size().Height))
 	s.fgSettingItems = append(s.fgSettingItems, linkEndEndpoint)
 
-	link := canvas.NewRectangle(config.ShadowColor)
+	link := canvas.NewRectangle(theme.HoverColor())
 	// var linkWidth float32
 	// for i := 0; i < len(objects); i++ {
 	// 	switch i {
@@ -595,17 +604,17 @@ func (s *Settings) genEntryWithLink(objects []fyne.CanvasObject, placeHolder str
 	entry.Move(fyne.NewPos(link.Position().X+link.Size().Width/2-width/2, link.Position().Y+link.Size().Height-height/2-2.5))
 	entry.OnSubmitted = onSubmit
 	entry.OnCursorChanged = func() {
-		linkStartEndpoint.FillColor = config.ShadowColor
-		linkEndEndpoint.FillColor = config.ShadowColor
-		link.FillColor = config.ShadowColor
+		linkStartEndpoint.FillColor = theme.HoverColor()
+		linkEndEndpoint.FillColor = theme.HoverColor()
+		link.FillColor = theme.HoverColor()
 		linkStartEndpoint.Refresh()
 		linkEndEndpoint.Refresh()
 		link.Refresh()
 	}
 	entry.OnTapped = func(event *fyne.PointEvent) {
-		linkStartEndpoint.FillColor = config.AccentColor
-		linkEndEndpoint.FillColor = config.AccentColor
-		link.FillColor = config.AccentColor
+		linkStartEndpoint.FillColor = theme.PrimaryColor()
+		linkEndEndpoint.FillColor = theme.PrimaryColor()
+		link.FillColor = theme.PrimaryColor()
 		linkStartEndpoint.Refresh()
 		linkEndEndpoint.Refresh()
 		link.Refresh()

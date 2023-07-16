@@ -2,7 +2,6 @@ package handler
 
 import (
 	"FallGuys66/common/cbm"
-	"FallGuys66/config"
 	"FallGuys66/db"
 	"FallGuys66/db/model"
 	"FallGuys66/live/douyu/lib/logger"
@@ -15,6 +14,7 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/data/binding"
 	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/wesovilabs/koazee"
 	"golang.org/x/text/width"
@@ -712,7 +712,7 @@ func refreshData(
 	} else {
 		cache[recreateKey] = "true"
 		cachePager[key] = nil
-		tabs.Items[idx].Content = utils.MakeEmptyList(config.AccentColor)
+		tabs.Items[idx].Content = utils.MakeEmptyList(theme.PrimaryColor())
 	}
 }
 
