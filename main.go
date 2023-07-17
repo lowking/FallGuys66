@@ -35,6 +35,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/skratchdot/open-golang/open"
 	lock "github.com/viney-shih/go-lock"
 )
 
@@ -46,7 +47,7 @@ const PLivePlatform = "PLivePlatform"
 var topWindow fyne.Window
 var tabs *container.AppTabs
 var setting *settings.Settings
-var version = "1.6.9"
+var version = "1.7.0"
 var driver fyne.Driver
 var window fyne.Window
 var biliClient *gobilibili.BiliBiliClient
@@ -465,6 +466,17 @@ func main() {
 	logger.Info("Initializing search stuff ...")
 	searchEles := generateSearchContainer()
 	elements = append(elements, searchEles...)
+
+	// 打开数据文件夹
+	logger.Info("Initializing open folder button ...")
+	btOpenDataFolder := widget.NewButtonWithIcon("打开数据文件夹", theme.FolderOpenIcon(), func() {
+		if err := open.Run(config.UserConfigDir); err != nil {
+			dialog.ShowInformation("提示", fmt.Sprintf("打开[%s]失败，错误：%v", config.UserConfigDir, err), window)
+		}
+	})
+	btOpenDataFolder.Resize(fyne.NewSize(150, 35))
+	btOpenDataFolder.Move(fyne.NewPos(-10, config.AppSize.Height-btOpenDataFolder.Size().Height-6))
+	elements = append(elements, btOpenDataFolder)
 
 	// 说明，从远程获取
 	logger.Info("Initializing remark ...")

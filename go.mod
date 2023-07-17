@@ -8,6 +8,7 @@ require (
 	github.com/go-vgo/robotgo v0.100.10
 	github.com/gorilla/websocket v1.5.0
 	github.com/sirodeneko/gobilibiliDanmu v0.0.0-20210506093710-58389c377ef2
+	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966
 	github.com/stretchr/testify v1.8.1
 	github.com/viney-shih/go-lock v1.1.2
 	github.com/wesovilabs/koazee v0.0.5
