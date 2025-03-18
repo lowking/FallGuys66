@@ -55,6 +55,12 @@ var enableQueryLoop = true
 var connectLock = lock.NewCASMutex()
 var searchLock = lock.NewCASMutex()
 
+/*
+*
+build binary package
+mac: fyne package -name FallGuys66 -os darwin -icon data/assets/logo-white.png --src ~/FallGuys66/
+win: export CGO_ENABLED=1 && export GOOS=windows && export GOARCH=amd64 && export CC=x86_64-w64-mingw32-gcc && go build -ldflags="-s -w -H windowsgui" -o ./build/FallGuys66.exe
+*/
 func main() {
 	offsetX := float32(-50)
 	offsetY := float32(3)
