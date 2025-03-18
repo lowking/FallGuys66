@@ -47,7 +47,7 @@ const PLivePlatform = "PLivePlatform"
 var topWindow fyne.Window
 var tabs *container.AppTabs
 var setting *settings.Settings
-var version = "1.7.0"
+var version = "1.7.1"
 var driver fyne.Driver
 var window fyne.Window
 var biliClient *gobilibili.BiliBiliClient
@@ -72,7 +72,7 @@ func main() {
 	// 托盘图标
 	makeTray(application)
 	handler.WhereMap[0] = &model.MapInfo{State: "0"}
-	handler.OrderMap[0] = `created asc, map_id`
+	handler.OrderMap[0] = `created desc, map_id`
 	handler.WhereMap[1] = &model.MapInfo{State: "1"}
 	handler.OrderMap[1] = `play_time desc, map_id`
 	handler.WhereMap[2] = &model.MapInfo{Star: "1"}
