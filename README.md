@@ -1,5 +1,7 @@
 # 运行效果截图
 ![shot](./doc/shot.png)
+![shot1](./doc/shot1.png)
+![shot2](./doc/shot2.png)
 # 项目打包命令
 > 本人开发环境mac下的打包命令
 ```
